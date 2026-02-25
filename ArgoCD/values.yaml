@@ -60,6 +60,12 @@ argo-cd:
     secret:
       createSecret: true
 
+    repositories:
+      homelab:
+        url: https://github.com/ModerNews/homelab-helm.git
+        type: git
+        name: homelab
+
   ## Application controller
   controller:
     name: application-controller
