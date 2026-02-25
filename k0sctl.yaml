@@ -16,6 +16,10 @@ spec:
           src: manifests/metallb-config.yaml
           dstDir: /var/lib/k0s/manifests/metallb/
           perm: 0644
+        - name: cert-manager-clusterissuer
+          src: manifests/cert-manager-clusterissuer.yaml
+          dstDir: /var/lib/k0s/manifests/cert-manager/
+          perm: 0644
   k0s:
     version: 1.35.1+k0s.0
     config:
@@ -33,23 +37,45 @@ spec:
         storage:
           type: kine
         extensions:
+          storage:
+            type: openebs_local_storage
           helm:
             repositories:
               - name: traefik
                 url: https://traefik.github.io/charts
               - name: metallb
                 url: https://metallb.github.io/metallb
+              - name: jetstack
+                url: https://charts.jetstack.io
+              - name: external-dns
+                url: https://kubernetes-sigs.github.io/external-dns
             charts:
               - name: metallb
                 chartname: metallb/metallb
                 version: "0.14.9"
                 namespace: metallb-system
                 order: 1
+              - name: cert-manager
+                chartname: jetstack/cert-manager
+                version: "v1.19.4"
+                namespace: cert-manager
+                order: 3
+                values: |2
+                  crds:
+                    enabled: true
+                  replicaCount: 1
+                  resources:
+                    requests:
+                      cpu: 25m
+                      memory: 64Mi
+                    limits:
+                      cpu: 250m
+                      memory: 256Mi
               - name: traefik
                 chartname: traefik/traefik
                 version: "38.0.1"
                 namespace: traefik
-                order: 2
+                order: 4
                 values: |2
                   ingressClass:
                     enabled: true
@@ -85,9 +111,38 @@ spec:
                       entryPoints:
                         - websecure
                   providers:
+                    kubernetesIngress:
+                      allowCrossNamespace: true
                     kubernetesGateway:
                       enabled: false
                   gateway:
                     enabled: false
                   gatewayClass:
                     enabled: false
+              - name: external-dns
+                chartname: external-dns/external-dns
+                version: "1.20.0"
+                namespace: external-dns
+                order: 5
+                values: |2
+                  provider:
+                    name: cloudflare
+                  env:
+                    - name: CF_API_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: cloudflare-api-token
+                          key: api-token
+                  domainFilters:
+                    - gruzin.eu
+                  policy: sync
+                  sources:
+                    - ingress
+                  txtOwnerId: homelab
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 32Mi
+                    limits:
+                      cpu: 100m
+                      memory: 128Mi
