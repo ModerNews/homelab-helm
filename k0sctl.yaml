@@ -1,0 +1,93 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: homelab
+spec:
+  hosts:
+    - role: single
+      noTaints: true
+      ssh:
+        address: 192.168.0.253
+        user: gruzin
+        port: 22
+        keyPath: ~/.ssh/id_ed25519
+      files:
+        - name: metallb-config
+          src: manifests/metallb-config.yaml
+          dstDir: /var/lib/k0s/manifests/metallb/
+          perm: 0644
+  k0s:
+    version: 1.35.1+k0s.0
+    config:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: homelab
+      spec:
+        telemetry:
+          enabled: false
+        network:
+          provider: kuberouter
+          podCIDR: 10.244.0.0/16
+          serviceCIDR: 10.96.0.0/12
+        storage:
+          type: kine
+        extensions:
+          helm:
+            repositories:
+              - name: traefik
+                url: https://traefik.github.io/charts
+              - name: metallb
+                url: https://metallb.github.io/metallb
+            charts:
+              - name: metallb
+                chartname: metallb/metallb
+                version: "0.14.9"
+                namespace: metallb-system
+                order: 1
+              - name: traefik
+                chartname: traefik/traefik
+                version: "38.0.1"
+                namespace: traefik
+                order: 2
+                values: |2
+                  ingressClass:
+                    enabled: true
+                    isDefaultClass: true
+                    name: traefik
+                  deployment:
+                    kind: Deployment
+                    replicas: 1
+                  service:
+                    type: LoadBalancer
+                  ports:
+                    web:
+                      exposedPort: 80
+                    websecure:
+                      exposedPort: 443
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 64Mi
+                    limits:
+                      cpu: 500m
+                      memory: 256Mi
+                  readinessProbe:
+                    failureThreshold: 1
+                    periodSeconds: 5
+                  logs:
+                    access:
+                      enabled: false
+                  ingressRoute:
+                    dashboard:
+                      enabled: true
+                      matchRule: Host(`traefik.gruzin.eu`)
+                      entryPoints:
+                        - websecure
+                  providers:
+                    kubernetesGateway:
+                      enabled: false
+                  gateway:
+                    enabled: false
+                  gatewayClass:
+                    enabled: false

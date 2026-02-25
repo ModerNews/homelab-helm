@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: metrics-server-deployment
+  namespace: argocd
+spec:
+  generators:
+    - clusters:
+        selector: {} # Select all registered clusters
+  template:
+    metadata:
+      name: "{{nameNormalized}}-metrics-server"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/WMS-DEV/infra-helm.git
+        targetRevision: HEAD
+        path: metrics-server
+        helm:
+          releaseName: metrics-server
+      destination:
+        server: "{{server}}"
+        namespace: kube-system
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 3
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+        syncOptions:
+          - CreateNamespace=true

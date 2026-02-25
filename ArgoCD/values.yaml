@@ -1,0 +1,236 @@
+## Argo CD configuration
+## Chart: https://github.com/argoproj/argo-helm
+## Ref: https://github.com/argoproj/argo-cd
+argo-cd:
+  nameOverride: argocd
+  createClusterRoles: true
+
+  ## Custom resource configuration
+  crds:
+    install: true
+    keep: true
+
+  ## Globally shared configuration
+  global:
+    domain: argocd.gruzin.eu
+    revisionHistoryLimit: 3
+
+    logging:
+      format: json
+      level: info
+
+    image:
+      imagePullPolicy: IfNotPresent
+
+  ## Argo Configs
+  configs:
+    cm:
+      create: true
+      application.instanceLabelKey: argocd.argoproj.io/instance
+      application.sync.impersonation.enabled: false
+      exec.enabled: false
+      admin.enabled: true
+      timeout.reconciliation: 180s
+      timeout.hard.reconciliation: 0s
+      statusbadge.enabled: false
+
+    params:
+      create: true
+      server.insecure: true
+
+    rbac:
+      create: true
+      policy.default: ""
+      policy.csv: |
+        g, admin, role:admin
+
+    gpg:
+      keys: {}
+
+    ssh:
+      create: true
+      knownHosts: |
+        [ssh.github.com]:443 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+        [ssh.github.com]:443 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+        [ssh.github.com]:443 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+        github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+        github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+        github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+
+    secret:
+      createSecret: true
+
+  ## Application controller
+  controller:
+    name: application-controller
+    replicas: 1
+
+    pdb:
+      enabled: false
+
+    metrics:
+      enabled: false
+      serviceMonitor:
+        enabled: false
+
+    networkPolicy:
+      create: false
+
+  ## Dex
+  dex:
+    enabled: false
+
+  ## Redis
+  redis:
+    enabled: true
+    name: redis
+
+    pdb:
+      enabled: false
+
+    exporter:
+      enabled: false
+
+    metrics:
+      enabled: false
+      serviceMonitor:
+        enabled: false
+
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+    networkPolicy:
+      create: false
+
+  redisSecretInit:
+    enabled: true
+    name: redis-secret-init
+
+  ## Server
+  server:
+    name: server
+    replicas: 1
+
+    autoscaling:
+      enabled: false
+
+    pdb:
+      enabled: false
+
+    extensions:
+      enabled: true
+
+    metrics:
+      enabled: false
+      serviceMonitor:
+        enabled: false
+
+    ingress:
+      enabled: true
+      controller: "generic"
+      ingressClassName: "traefik"
+
+      hostname: "argocd.gruzin.eu"
+      path: /
+      pathType: Prefix
+      tls: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+    networkPolicy:
+      create: false
+
+  ## Repo Server
+  repoServer:
+    name: repo-server
+    replicas: 1
+
+    autoscaling:
+      enabled: false
+
+    pdb:
+      enabled: false
+
+    useEphemeralHelmWorkingDir: true
+
+    metrics:
+      enabled: false
+      serviceMonitor:
+        enabled: false
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+    networkPolicy:
+      create: false
+
+  ## ApplicationSet controller
+  applicationSet:
+    name: applicationset-controller
+    replicas: 1
+
+    pdb:
+      enabled: false
+
+    metrics:
+      enabled: false
+      serviceMonitor:
+        enabled: false
+
+    ingress:
+      enabled: true
+      ingressClassName: "traefik"
+      hostname: "argocd.gruzin.eu"
+      path: /api/webhook
+      pathType: Prefix
+      tls: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+
+    networkPolicy:
+      create: false
+
+  ## Notifications controller
+  notifications:
+    enabled: false
+
+  extraObjects:
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: homelab
+        namespace: argocd
+        labels:
+          argocd.argoproj.io/secret-type: cluster
+          gruzin.eu/cluster: homelab
+      type: Opaque
+      stringData:
+        name: homelab
+        server: https://kubernetes.default.svc
+        config: '{"tlsClientConfig":{"insecure":false}}'

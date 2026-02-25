@@ -1,0 +1,14 @@
+apiVersion: v2
+name: ArgoCD
+description: A Helm chart for deploying ArgoCD on a single-node homelab
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
+
+dependencies:
+  - name: argo-cd
+    version: "9.3.7"
+    repository: "https://argoproj.github.io/argo-helm"

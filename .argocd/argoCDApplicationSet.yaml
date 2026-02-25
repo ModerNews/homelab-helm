@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: argocd-deployment
+  namespace: argocd
+  annotations:
+    # Upgrade ArgoCD last to prevent upgrading when one of the components (i.e. VSO) becomes broken
+    argocd.argoproj.io/sync-wave: "100"
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            infrastructure.wmsdev.pl/cluster: tools.k8s.internal.wmsdev.pl
+  template:
+    metadata:
+      name: "{{nameNormalized}}-argocd"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/WMS-DEV/infra-helm.git
+        targetRevision: HEAD
+        path: ArgoCD
+        helm:
+          releaseName: argocd
+          valueFiles:
+            - values.yaml
+      destination:
+        server: "{{server}}"
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 3
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+          - ServerSideApply=true
