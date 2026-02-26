@@ -37,8 +37,6 @@ spec:
         storage:
           type: kine
         extensions:
-          storage:
-            type: openebs_local_storage
           helm:
             repositories:
               - name: traefik
@@ -49,6 +47,8 @@ spec:
                 url: https://charts.jetstack.io
               - name: external-dns
                 url: https://kubernetes-sigs.github.io/external-dns
+              - name: local-path-provisioner
+                url: https://charts.containeroo.ch
             charts:
               - name: metallb
                 chartname: metallb/metallb
@@ -119,6 +119,17 @@ spec:
                     enabled: false
                   gatewayClass:
                     enabled: false
+              - name: local-path-provisioner
+                chartname: local-path-provisioner/local-path-provisioner
+                version: "0.0.35"
+                namespace: local-path-storage
+                order: 2
+                values: |2
+                  storageClass:
+                    create: true
+                    defaultClass: true
+                    name: local-path
+                    reclaimPolicy: Delete
               - name: external-dns
                 chartname: external-dns/external-dns
                 version: "1.20.0"

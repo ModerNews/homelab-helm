@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: jellyseerr.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: jellyseerr-tls
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.jellyseerr.http.accepted_statuscodes: '["200-299", "307"]'
+    kuma.jellyseerr.http.name: Jellyseerr
+    kuma.jellyseerr.http.url: https://jellyseerr.gruzin.eu
+  labels:
+    io.kompose.service: jellyseerr
+  name: jellyseerr
+spec:
+  ports:
+    - name: "5055"
+      port: 5055
+      targetPort: 5055
+  selector:
+    io.kompose.service: jellyseerr

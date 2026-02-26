@@ -1,0 +1,171 @@
+services:
+    jellyfin:
+        image: jellyfin/jellyfin
+        container_name: jellyfin
+        user: 1000:1000
+        volumes:
+          - /media/jellyfin/config:/config
+          - /media/jellyfin/cache:/cache
+          - /media/tvseries:/tv
+          - /media/movies:/movies
+          - type: bind
+            source: /media/jellyfin/fonts
+            target: /usr/local/share/fonts/custom
+            read_only: true
+        expose:
+          - 8096
+          - 8920
+        networks:
+          traefik-net:
+        restart: unless-stopped
+        labels:
+          - "kompose.volume.type=hostPath"
+          - "kompose.service.expose=jellyfin.gruzin.eu"
+          - "kompose.service.expose.ingress-class-name=traefik"
+          - "kompose.service.expose.tls-secret=jellyfin-tls"
+          - "kompose.image-pull-policy=Always"
+          - "kuma.jellyfin.http.name=Jellyfin Media Server"
+          - "kuma.jellyfin.http.url=https://jellyfin.gruzin.eu"
+          - "kuma.jellyfin.http.accepted_statuscodes=[\"200-299\", \"302\"]"
+
+    jellyseerr:
+      image: ghcr.io/fallenbagel/jellyseerr:latest
+      init: true
+      container_name: jellyseerr
+      environment:
+        - LOG_LEVEL=debug
+        - TZ=Europe/Warsaw
+        - PORT=5055
+      expose:
+        - 5055
+      networks:
+        traefik-net:
+      volumes:
+        - /opt/jellyseerrconfig:/app/config
+      healthcheck:
+        test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+        start_period: 20s
+        timeout: 3s
+        interval: 15s
+        retries: 3
+      restart: unless-stopped
+      labels:
+          - "kompose.volume.type=hostPath"
+          - "kompose.service.expose=jellyseerr.gruzin.eu"
+          - "kompose.service.expose.ingress-class-name=traefik"
+          - "kompose.service.expose.tls-secret=jellyseerr-tls"
+          - "kompose.image-pull-policy=Always"
+          - "kuma.jellyseerr.http.name=Jellyseerr"
+          - "kuma.jellyseerr.http.url=https://jellyseerr.gruzin.eu"
+          - "kuma.jellyseerr.http.accepted_statuscodes=[\"200-299\", \"307\"]"
+
+    sonarr:
+          image: lscr.io/linuxserver/sonarr:latest
+          container_name: sonarr
+          environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=Europe/Warsaw
+          volumes:
+            - /media/sonarr/data:/config
+            - /media/tvseries:/tv
+            - /media/downloads:/media/downloads
+          expose:
+            - 8989
+          networks:
+            traefik-net:
+          restart: unless-stopped
+          labels:
+            - "kompose.volume.type=hostPath"
+            - "kompose.service.expose=sonarr.bay.gruzin.eu"
+            - "kompose.service.expose.ingress-class-name=traefik"
+            - "kompose.service.expose.tls-secret=sonarr-tls"
+            - "kompose.image-pull-policy=Always"
+            - "kuma.sonarr.http.name=Sonarr TV"
+            - "kuma.sonarr.http.url=https://sonarr.bay.gruzin.eu"
+            - "kuma.sonarr.http.accepted_statuscodes=[\"200-299\"]"
+
+    radarr:
+          image: lscr.io/linuxserver/radarr:latest
+          container_name: radarr
+          environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=Etc/Warsaw
+          volumes:
+            - /media/radarr/config:/config
+            - /media/movies:/movies
+            - /media/downloads:/media/downloads
+          expose:
+            - 7878
+          networks:
+            traefik-net:
+          restart: unless-stopped
+          labels:
+            - "kompose.volume.type=hostPath"
+            - "kompose.service.expose=radarr.bay.gruzin.eu"
+            - "kompose.service.expose.ingress-class-name=traefik"
+            - "kompose.service.expose.tls-secret=radarr-tls"
+            - "kompose.image-pull-policy=Always"
+            - "kuma.radarr.http.name=Radarr Movies"
+            - "kuma.radarr.http.url=https://radarr.bay.gruzin.eu"
+            - "kuma.radarr.http.accepted_statuscodes=[\"200-299\"]"
+
+    prowlarr:
+        image: lscr.io/linuxserver/prowlarr:latest
+        container_name: prowlarr
+        environment:
+          - PUID=1000
+          - PGID=1000
+          - TZ=Etc/Warsaw
+        volumes:
+          - /media/prowlarr/config:/config
+        expose:
+          - 9696
+        networks:
+          traefik-net:
+        restart: unless-stopped
+        labels:
+          - "kompose.volume.type=hostPath"
+          - "kompose.service.expose=prowlarr.bay.gruzin.eu"
+          - "kompose.service.expose.ingress-class-name=traefik"
+          - "kompose.service.expose.tls-secret=prowlarr-tls"
+          - "kompose.image-pull-policy=Always"
+          - "kuma.prowlarr.http.name=Prowlarr Indexer"
+          - "kuma.prowlarr.http.url=https://prowlarr.bay.gruzin.eu"
+          - "kuma.prowlarr.http.accepted_statuscodes=[\"200-299\"]"
+
+    qbittorrent:
+          image: lscr.io/linuxserver/qbittorrent:latest
+          container_name: qbittorrent
+          environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=Europe/Warsaw
+            - WEBUI_PORT=8080
+            - TORRENTING_PORT=6881
+          volumes:
+            - /opt/qbittorrent:/config
+            - /media:/media
+          ports:
+            - 6881:6881
+            - 6881:6881/udp
+          expose:
+            - 8080
+          networks:
+            traefik-net:
+          restart: unless-stopped
+          labels:
+            - "kompose.volume.type=hostPath"
+            - "kompose.service.type=LoadBalancer"
+            - "kompose.service.expose=qbittorrent.gruzin.eu"
+            - "kompose.service.expose.ingress-class-name=traefik"
+            - "kompose.service.expose.tls-secret=qbittorrent-tls"
+            - "kompose.image-pull-policy=Always"
+            - "kuma.qbittorrent.http.name=qBittorrent"
+            - "kuma.qbittorrent.http.url=https://qbittorrent.gruzin.eu"
+            - "kuma.qbittorrent.http.accepted_statuscodes=[\"200-299\"]"
+
+networks:
+  traefik-net:
+    external: true

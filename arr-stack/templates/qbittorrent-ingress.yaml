@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: qbittorrent.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: qbittorrent-tls
+    kompose.service.type: LoadBalancer
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.qbittorrent.http.accepted_statuscodes: '["200-299"]'
+    kuma.qbittorrent.http.name: qBittorrent
+    kuma.qbittorrent.http.url: https://qbittorrent.gruzin.eu
+  labels:
+    io.kompose.service: qbittorrent
+  name: qbittorrent
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qbittorrent.gruzin.eu
+      http:
+        paths:
+          - backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - qbittorrent.gruzin.eu
+      secretName: qbittorrent-tls

@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: radarr.bay.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: radarr-tls
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.radarr.http.accepted_statuscodes: '["200-299"]'
+    kuma.radarr.http.name: Radarr Movies
+    kuma.radarr.http.url: https://radarr.bay.gruzin.eu
+  labels:
+    io.kompose.service: radarr
+  name: radarr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: radarr
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml
+        kompose.image-pull-policy: Always
+        kompose.service.expose: radarr.bay.gruzin.eu
+        kompose.service.expose.ingress-class-name: traefik
+        kompose.service.expose.tls-secret: radarr-tls
+        kompose.version: 1.38.0 (HEAD)
+        kompose.volume.type: hostPath
+        kuma.radarr.http.accepted_statuscodes: '["200-299"]'
+        kuma.radarr.http.name: Radarr Movies
+        kuma.radarr.http.url: https://radarr.bay.gruzin.eu
+      labels:
+        io.kompose.service: radarr
+    spec:
+      containers:
+        - env:
+            - name: PGID
+              value: "1000"
+            - name: PUID
+              value: "1000"
+            - name: TZ
+              value: Europe/Warsaw
+          image: lscr.io/linuxserver/radarr:latest
+          imagePullPolicy: Always
+          name: radarr
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          ports:
+            - containerPort: 7878
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /config
+              name: radarr-hostpath0
+            - mountPath: /movies
+              name: radarr-hostpath1
+            - mountPath: /media/downloads
+              name: radarr-hostpath2
+      restartPolicy: Always
+      volumes:
+        - hostPath:
+            path: /mnt/hdd/media/radarr/config
+          name: radarr-hostpath0
+        - hostPath:
+            path: /mnt/hdd/media/movies
+          name: radarr-hostpath1
+        - hostPath:
+            path: /mnt/hdd/media/downloads
+          name: radarr-hostpath2

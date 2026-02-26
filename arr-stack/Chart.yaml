@@ -1,0 +1,8 @@
+apiVersion: v2
+name: arr-stack
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

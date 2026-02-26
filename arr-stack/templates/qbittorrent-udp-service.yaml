@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: qbittorrent.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: qbittorrent-tls
+    kompose.service.type: LoadBalancer
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.qbittorrent.http.accepted_statuscodes: '["200-299"]'
+    kuma.qbittorrent.http.name: qBittorrent
+    kuma.qbittorrent.http.url: https://qbittorrent.gruzin.eu
+  labels:
+    io.kompose.service: qbittorrent-udp
+  name: qbittorrent-udp
+spec:
+  ports:
+    - name: "6881"
+      port: 6881
+      protocol: UDP
+      targetPort: 6881
+  selector:
+    io.kompose.service: qbittorrent
+  type: LoadBalancer

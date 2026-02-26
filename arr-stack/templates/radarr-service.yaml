@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: radarr.bay.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: radarr-tls
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.radarr.http.accepted_statuscodes: '["200-299"]'
+    kuma.radarr.http.name: Radarr Movies
+    kuma.radarr.http.url: https://radarr.bay.gruzin.eu
+  labels:
+    io.kompose.service: radarr
+  name: radarr
+spec:
+  ports:
+    - name: "7878"
+      port: 7878
+      targetPort: 7878
+  selector:
+    io.kompose.service: radarr

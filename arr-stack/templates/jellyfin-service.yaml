@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: jellyfin.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: jellyfin-tls
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.jellyfin.http.accepted_statuscodes: '["200-299", "302"]'
+    kuma.jellyfin.http.name: Jellyfin Media Server
+    kuma.jellyfin.http.url: https://jellyfin.gruzin.eu
+  labels:
+    io.kompose.service: jellyfin
+  name: jellyfin
+spec:
+  ports:
+    - name: "8096"
+      port: 8096
+      targetPort: 8096
+  selector:
+    io.kompose.service: jellyfin

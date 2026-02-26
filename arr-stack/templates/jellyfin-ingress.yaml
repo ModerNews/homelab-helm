@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.image-pull-policy: Always
+    kompose.service.expose: jellyfin.gruzin.eu
+    kompose.service.expose.ingress-class-name: traefik
+    kompose.service.expose.tls-secret: jellyfin-tls
+    kompose.version: 1.38.0 (HEAD)
+    kompose.volume.type: hostPath
+    kuma.jellyfin.http.accepted_statuscodes: '["200-299", "302"]'
+    kuma.jellyfin.http.name: Jellyfin Media Server
+    kuma.jellyfin.http.url: https://jellyfin.gruzin.eu
+  labels:
+    io.kompose.service: jellyfin
+  name: jellyfin
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: jellyfin.gruzin.eu
+      http:
+        paths:
+          - backend:
+              service:
+                name: jellyfin
+                port:
+                  number: 8096
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - jellyfin.gruzin.eu
+      secretName: jellyfin-tls
