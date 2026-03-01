@@ -79,4 +79,5 @@ immich:
     persistence:
       cache:
         type: persistentVolumeClaim
+        accessMode: ReadWriteOnce
         storageClass: local-path
