@@ -1,0 +1,82 @@
+immich:
+  controllers:
+    main:
+      containers:
+        main:
+          env:
+            DB_URL:
+              valueFrom:
+                secretKeyRef:
+                  name: immich-database-app
+                  key: uri
+
+  immich:
+    metrics:
+      enabled: true
+    persistence:
+      library:
+        existingClaim: immich-library
+    configuration:
+      storageTemplate:
+        enabled: true
+        template: "{{y}}/{{y}}-{{MM}}-{{dd}}/{{filename}}"
+      library:
+        watch:
+          enabled: true
+
+  valkey:
+    enabled: true
+    controllers:
+      main:
+        containers:
+          main:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 256Mi
+
+  server:
+    controllers:
+      main:
+        containers:
+          main:
+            resources:
+              requests:
+                cpu: 50m
+                memory: 256Mi
+              limits:
+                memory: 2Gi
+    ingress:
+      main:
+        enabled: true
+        className: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt
+        hosts:
+          - host: immich.gruzin.eu
+            paths:
+              - path: "/"
+                service:
+                  identifier: main
+        tls:
+          - secretName: immich-tls
+            hosts:
+              - immich.gruzin.eu
+
+  machine-learning:
+    controllers:
+      main:
+        containers:
+          main:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+              limits:
+                memory: 4Gi
+    persistence:
+      cache:
+        type: persistentVolumeClaim
+        storageClass: local-path

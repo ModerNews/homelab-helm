@@ -1,0 +1,15 @@
+apiVersion: v2
+name: immich
+description: Wrapper chart for Immich - PVCs and Postgres
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    email: grzegorz.jagielski@wmsdev.pl
+    url: https://github.com/ModerNews
+
+dependencies:
+  - name: immich
+    version: 0.10.3
+    repository: oci://ghcr.io/immich-app/immich-charts
