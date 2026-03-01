@@ -236,7 +236,9 @@ argo-cd:
 
     notifiers:
       service.github: |
-        token: $github-token
+        appID: "2982594"
+        installationID: "113341553"
+        privateKey: $github-privateKey
 
     subscriptions:
       - recipients:
