@@ -69,10 +69,10 @@ spec:
       restartPolicy: Always
       volumes:
         - hostPath:
-            path: /mnt/hdd/media/sonarr/data
+            path: /mnt/hdd/media/configs/sonarr/data
           name: sonarr-hostpath0
         - hostPath:
-            path: /mnt/hdd/media/tvseries
+            path: /mnt/hdd/media/contents/tvseries
           name: sonarr-hostpath1
         - hostPath:
             path: /mnt/hdd/media/downloads

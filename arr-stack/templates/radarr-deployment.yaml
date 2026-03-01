@@ -69,10 +69,10 @@ spec:
       restartPolicy: Always
       volumes:
         - hostPath:
-            path: /mnt/hdd/media/radarr/config
+            path: /mnt/hdd/media/configs/radarr/config
           name: radarr-hostpath0
         - hostPath:
-            path: /mnt/hdd/media/movies
+            path: /mnt/hdd/media/contents/movies
           name: radarr-hostpath1
         - hostPath:
             path: /mnt/hdd/media/downloads

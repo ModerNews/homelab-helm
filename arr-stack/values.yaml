@@ -1,0 +1,65 @@
+jellyfin:
+  image:
+    pullPolicy: Always
+
+  deploymentStrategy:
+    type: Recreate
+
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+  persistence:
+    config:
+      enabled: true
+      existingClaim: jellyfin-config
+    media:
+      enabled: false
+
+  ingress:
+    enabled: true
+    className: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    hosts:
+      - host: jellyfin.gruzin.eu
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: jellyfin-tls
+        hosts:
+          - jellyfin.gruzin.eu
+
+  volumes:
+    - name: tv
+      hostPath:
+        path: /mnt/hdd/media/contents/tvseries
+    - name: movies
+      hostPath:
+        path: /mnt/hdd/media/contents/movies
+    - name: cache
+      hostPath:
+        path: /mnt/hdd/media/configs/jellyfin/cache
+    - name: fonts
+      hostPath:
+        path: /mnt/hdd/media/configs/jellyfin/fonts
+
+  volumeMounts:
+    - name: tv
+      mountPath: /tv
+    - name: movies
+      mountPath: /movies
+    - name: cache
+      mountPath: /cache
+    - name: fonts
+      mountPath: /usr/local/share/fonts/custom
+      readOnly: true

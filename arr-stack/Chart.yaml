@@ -1,8 +1,13 @@
 apiVersion: v2
 name: arr-stack
 type: application
-version: 0.1.0
+version: 0.2.0
 
 maintainers:
   - name: Grzegorz Jagielski
     url: https://github.com/ModerNews
+
+dependencies:
+  - name: jellyfin
+    version: "2.7.0"
+    repository: "https://jellyfin.github.io/jellyfin-helm"
