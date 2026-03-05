@@ -27,6 +27,12 @@ paperless-ngx:
     PAPERLESS_OCR_LANGUAGE: pol+eng
     PAPERLESS_OCR_CLEAN: clean-final
     PAPERLESS_REDIS: redis://paperless-redis:6379
+    PAPERLESS_ADMIN_USER: admin
+    PAPERLESS_ADMIN_PASSWORD:
+      valueFrom:
+        secretKeyRef:
+          name: paperless-admin
+          key: password
 
   resources:
     requests:
