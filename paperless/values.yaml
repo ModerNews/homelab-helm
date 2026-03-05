@@ -25,6 +25,7 @@ paperless-ngx:
           key: password
     PAPERLESS_OCR_LANGUAGE: pol+eng
     PAPERLESS_OCR_CLEAN: clean-final
+    PAPERLESS_REDIS: redis://paperless-redis:6379
 
   resources:
     requests:
@@ -37,9 +38,7 @@ paperless-ngx:
     enabled: false
 
   redis:
-    enabled: true
-    auth:
-      enabled: false
+    enabled: false
 
   persistence:
     data:
