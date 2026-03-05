@@ -1,0 +1,81 @@
+paperless-ngx:
+  env:
+    TZ: Europe/Warsaw
+    PAPERLESS_URL: https://paperless.gruzin.eu
+    PAPERLESS_DBENGINE: postgresql
+    PAPERLESS_DBHOST:
+      valueFrom:
+        secretKeyRef:
+          name: paperless-database-app
+          key: host
+    PAPERLESS_DBNAME:
+      valueFrom:
+        secretKeyRef:
+          name: paperless-database-app
+          key: dbname
+    PAPERLESS_DBUSER:
+      valueFrom:
+        secretKeyRef:
+          name: paperless-database-app
+          key: user
+    PAPERLESS_DBPASS:
+      valueFrom:
+        secretKeyRef:
+          name: paperless-database-app
+          key: password
+    PAPERLESS_OCR_LANGUAGE: pol+eng
+    PAPERLESS_OCR_CLEAN: clean-final
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+
+  postgresql:
+    enabled: false
+
+  redis:
+    enabled: true
+    auth:
+      enabled: false
+
+  persistence:
+    data:
+      enabled: true
+      accessMode: ReadWriteOnce
+      storageClass: local-path
+      size: 5Gi
+    media:
+      enabled: true
+      accessMode: ReadWriteOnce
+      storageClass: local-path
+      size: 10Gi
+    export:
+      enabled: true
+      accessMode: ReadWriteOnce
+      storageClass: local-path
+      size: 5Gi
+    consume:
+      enabled: true
+      accessMode: ReadWriteOnce
+      storageClass: local-path
+      size: 5Gi
+
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      hosts:
+        - host: paperless.gruzin.eu
+          paths:
+            - path: "/"
+              service:
+                identifier: main
+      tls:
+        - secretName: paperless-tls
+          hosts:
+            - paperless.gruzin.eu

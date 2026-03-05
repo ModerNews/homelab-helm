@@ -1,0 +1,15 @@
+apiVersion: v2
+name: paperless
+description: Wrapper chart for Paperless-ngx - CNPG Postgres and storage
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    email: grzegorz.jagielski@wmsdev.pl
+    url: https://github.com/ModerNews
+
+dependencies:
+  - name: paperless-ngx
+    version: 0.24.1
+    repository: https://charts.gabe565.com
