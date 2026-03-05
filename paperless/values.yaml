@@ -23,6 +23,7 @@ paperless-ngx:
         secretKeyRef:
           name: paperless-database-app
           key: password
+    PAPERLESS_OCR_LANGUAGES: pol
     PAPERLESS_OCR_LANGUAGE: pol+eng
     PAPERLESS_OCR_CLEAN: clean-final
     PAPERLESS_REDIS: redis://paperless-redis:6379
