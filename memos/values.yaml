@@ -1,0 +1,20 @@
+persistence:
+  enabled: true
+  size: 5Gi
+  storageClass: local-path
+  accessMode: ReadWriteOnce
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: memos.gruzin.eu
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: memos-tls
+      hosts:
+        - memos.gruzin.eu
