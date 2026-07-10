@@ -1,2 +1,7 @@
 charts/
 Chart.lock
+
+# Real secrets filled in from *.example.yaml templates - applied via kubectl,
+# never committed.
+mail-secret.yaml
+argocd-secret.yaml
