@@ -1,0 +1,116 @@
+{{- if .Values.initJob.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name }}-init
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-init
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ .Values.initJob.unsealTokenSecretName }}"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-init
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-init
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-init
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-init
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 30
+  template:
+    metadata:
+      name: {{ .Release.Name }}-init
+    spec:
+      serviceAccountName: {{ .Release.Name }}-init
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: "{{ .Values.initJob.image.repository }}:{{ .Values.initJob.image.tag }}"
+          env:
+            - name: VAULT_ADDR
+              value: "http://{{ .Release.Name }}:8200"
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.initJob.rootTokenSecretName }}
+                  key: token
+            - name: TRANSIT_KEY_NAME
+              value: {{ .Values.transitKeyName | quote }}
+            - name: POLICY_NAME
+              value: {{ .Values.policyName | quote }}
+            - name: TOKEN_PERIOD
+              value: {{ .Values.initJob.tokenPeriod | quote }}
+            - name: UNSEAL_TOKEN_SECRET_NAME
+              value: {{ .Values.initJob.unsealTokenSecretName | quote }}
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              apk add --no-cache curl >/dev/null
+
+              # Wait for this transit Vault to be manually unsealed by an operator.
+              until vault status >/dev/null 2>&1; do
+                echo "waiting for transit vault to be unsealed..."
+                sleep 10
+              done
+
+              vault secrets enable transit 2>&1 | grep -qi "path is already in use" && true || true
+              vault write -f "transit/keys/${TRANSIT_KEY_NAME}"
+
+              vault policy write "${POLICY_NAME}" - <<EOF
+              path "transit/encrypt/${TRANSIT_KEY_NAME}" {
+                capabilities = ["update"]
+              }
+              path "transit/decrypt/${TRANSIT_KEY_NAME}" {
+                capabilities = ["update"]
+              }
+              EOF
+
+              KUBE_API="https://kubernetes.default.svc"
+              KUBE_CACERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              KUBE_TOKEN=/var/run/secrets/kubernetes.io/serviceaccount/token
+
+              existing=$(curl -s --cacert "${KUBE_CACERT}" -H "Authorization: Bearer $(cat ${KUBE_TOKEN})" \
+                -o /dev/null -w "%{http_code}" \
+                "${KUBE_API}/api/v1/namespaces/${NAMESPACE}/secrets/${UNSEAL_TOKEN_SECRET_NAME}")
+
+              if [ "${existing}" = "200" ]; then
+                echo "unseal token secret already exists, leaving it untouched"
+                exit 0
+              fi
+
+              new_token=$(vault token create -orphan -period="${TOKEN_PERIOD}" -policy="${POLICY_NAME}" -field=token)
+              token_b64=$(printf '%s' "${new_token}" | base64 | tr -d '\n')
+
+              curl -sf --cacert "${KUBE_CACERT}" -H "Authorization: Bearer $(cat ${KUBE_TOKEN})" \
+                -H "Content-Type: application/json" \
+                -X POST "${KUBE_API}/api/v1/namespaces/${NAMESPACE}/secrets" \
+                -d "{\"apiVersion\":\"v1\",\"kind\":\"Secret\",\"metadata\":{\"name\":\"${UNSEAL_TOKEN_SECRET_NAME}\"},\"data\":{\"token\":\"${token_b64}\"}}"
+
+              echo "unseal token stored in secret/${UNSEAL_TOKEN_SECRET_NAME} - copy it to the remote Vault's seal config"
+{{- end }}

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: transit-vault
+description: Standalone Vault instance whose sole job is providing a Transit engine for auto-unsealing the remote Vault instance
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
+
+dependencies:
+  - name: vault
+    version: "0.34.0"
+    repository: "https://helm.releases.hashicorp.com"

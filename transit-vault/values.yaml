@@ -1,0 +1,85 @@
+# Root-of-trust Vault instance. This Vault is *not* auto-unsealed by anything -
+# it holds its own Shamir key shares and must be unsealed manually with
+# `vault operator unseal` after every restart. Its only purpose is exposing a
+# `transit` secrets engine that the remote Vault instance points its
+# `seal "transit"` stanza at for auto-unseal.
+vault:
+  injector:
+    enabled: false
+
+  csi:
+    enabled: false
+
+  ui:
+    enabled: true
+
+  server:
+    ha:
+      enabled: false
+
+    standalone:
+      enabled: true
+      # TLS is terminated at the Traefik ingress (matches the rest of this
+      # cluster's ingress convention, e.g. paperless/argocd) - the listener
+      # inside the pod stays plaintext, ClusterIP-only.
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "file" {
+          path = "/vault/data"
+        }
+
+    dataStorage:
+      enabled: true
+      size: 1Gi
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      hosts:
+        - host: transit-vault.gruzin.eu
+      tls:
+        - secretName: transit-vault-tls
+          hosts:
+            - transit-vault.gruzin.eu
+
+# Name of the transit key the remote Vault's seal stanza will encrypt/decrypt
+# its master key with.
+transitKeyName: remote-vault-unseal
+
+# Name of the Vault policy granting the minimum rights needed for auto-unseal
+# (create the key once, then encrypt/decrypt against it).
+policyName: transit-unseal
+
+initJob:
+  enabled: true
+  # Secret created out-of-band (see vault-root-token.example.yaml) holding the
+  # root token produced by `vault operator init` on this transit Vault. The
+  # job only ever uses it to bootstrap the transit engine/policy/token once.
+  rootTokenSecretName: transit-vault-root-token
+  # Secret this job writes the periodic unseal token into. Copy its value out
+  # to the remote Vault's environment/secret store - it is never applied there
+  # automatically since the remote cluster is a separate, unmanaged cluster.
+  unsealTokenSecretName: transit-vault-unseal-token
+  image:
+    repository: hashicorp/vault
+    tag: "1.21.2"
+  # Periodic token TTL - the remote Vault's transit seal client renews it
+  # automatically as long as it stays in continuous use.
+  tokenPeriod: 768h
