@@ -22,7 +22,12 @@ spec:
     path: kubernetes/cluster-wide
   destination:
     server: https://kubernetes.default.svc
-    namespace: keycloak
+    # Must match the `namespace: keycloak-operator` that the upstream kustomization
+    # stamps onto every resource. The manifests ship no Namespace object of their
+    # own, and CreateNamespace only ever creates *this* namespace - never one a
+    # manifest declares for itself. Pointing this at `keycloak` therefore created
+    # the wrong namespace and applied into a missing one.
+    namespace: keycloak-operator
   syncPolicy:
     automated:
       prune: true

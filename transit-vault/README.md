@@ -1,9 +1,45 @@
-# Transit Vault
+# Vault (transit-vault)
 
-Standalone Vault instance whose only job is running a `transit` secrets
-engine for the **remote** Vault instance's auto-unseal (`seal "transit"`
-stanza). It is the root of trust, so it seals/unseals itself the normal way
-(Shamir shares) - nothing in this cluster auto-unseals it.
+The cluster's only Vault. It does two jobs:
+
+1. **Root of trust for the remote Vault.** A `transit` secrets engine that the
+   remote (WMS-DEV) instance points its `seal "transit"` stanza at for auto-unseal.
+2. **This cluster's secret store.** A `secret/` KV v2 mount holding one entry per
+   OIDC client at `secret/oidc/<app>`, which the
+   [Vault Secrets Operator](../vault-secrets-operator) materialises into app
+   namespaces. Anything still applied by hand (`mail-secret`, `argocd-secret`, the
+   Cloudflare token) belongs here too.
+
+Because it is the root of trust it seals/unseals itself the normal way (Shamir
+shares) - nothing auto-unseals it.
+
+```
+transit-vault --(transit engine)--> remote WMS-DEV Vault
+      '-------(secret/ + VSO)-----> app namespaces
+```
+
+The name is a leftover from job 1 and is deliberately kept: the remote cluster's
+seal stanza points at `transit-vault.gruzin.eu`, and that cluster is unmanaged from
+here, so renaming would mean a seal migration over there. `vault.gruzin.eu` is an
+ingress alias on the same instance.
+
+## Why not two Vaults
+
+A separate secrets Vault auto-unsealing against this one was built and then removed.
+It looked tidier, but this instance still has to be unsealed by hand first, so the
+chain cost ~250Mi on an 8GB node to save exactly zero manual steps - a reboot needed
+one `vault operator unseal` either way.
+
+The isolation it bought was also thinner than it appears. Vault's policy engine is
+the real boundary: the `oidc-read` policy is scoped to `secret/data/oidc/*`, so a
+compromised app namespace cannot reach `transit/` whether or not the two live in the
+same process. Splitting only helps against an attacker who already has the Vault
+process or a root token - and both instances ran on the same node under the same
+cluster admin anyway.
+
+If the remote Vault is ever something whose blast radius you want genuinely
+separated from homelab app secrets, that argues for moving it off this node, not for
+a second Vault beside it.
 
 ## First deploy
 
@@ -71,6 +107,21 @@ stanza). It is the root of trust, so it seals/unseals itself the normal way
      -o jsonpath='{.data.token}' | base64 -d
    ```
 
+7. Configure this cluster's own side - the `secret/` KV mount, Kubernetes auth, the
+   `oidc-read` policy, the `vso` role and one credential per OIDC client. All of
+   that is declared in [terraform/](../terraform):
+
+   ```bash
+   export VAULT_ADDR=https://vault.gruzin.eu
+   export VAULT_TOKEN=<root token from step 2>
+
+   cd terraform
+   terraform init
+   terraform apply
+   ```
+
+   Discard the root token afterwards - nothing in the cluster needs it.
+
 ## Remote Vault seal stanza
 
 On the remote Vault instance, add:
@@ -87,3 +138,36 @@ seal "transit" {
 
 After every restart of this transit Vault, someone has to run
 `vault operator unseal` again before the remote Vault can unseal itself.
+
+
+## After a node reboot
+
+Vault comes back sealed. Until it is unsealed, VSO cannot read anything and the
+remote Vault cannot unseal either.
+
+```bash
+kubectl exec -n transit-vault -it transit-vault-0 -- vault operator unseal   # x3 shares
+```
+
+Pods that already hold their credential keep running, so SSO only breaks if
+something restarts during the window. ArgoCD keeps `admin.enabled: true`, and Immich
+and Paperless keep their local logins, so the cluster stays reachable meanwhile.
+
+## Rotating an OIDC credential
+
+```bash
+cd terraform
+terraform apply -replace='random_password.oidc["immich"]'
+```
+
+VSO rewrites the Secret and the Keycloak operator reconciles the new value onto the
+client - both read the same object, so they cannot end up disagreeing. Restart the
+app if it only reads its credential at startup (Immich does).
+
+## Known trade-off
+
+The `vso` role binds the `default` ServiceAccount of each app namespace, and
+`oidc-read` is granted on `secret/oidc/*` rather than per-app paths. Any pod in those
+namespaces could therefore read another app's client secret. That is a deliberate
+single-tenant trade against maintaining a ServiceAccount, role and policy per app;
+both are declared in `terraform/main.tf` if you ever want to split them.

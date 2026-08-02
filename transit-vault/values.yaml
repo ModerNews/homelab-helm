@@ -1,8 +1,19 @@
-# Root-of-trust Vault instance. This Vault is *not* auto-unsealed by anything -
-# it holds its own Shamir key shares and must be unsealed manually with
-# `vault operator unseal` after every restart. Its only purpose is exposing a
-# `transit` secrets engine that the remote Vault instance points its
-# `seal "transit"` stanza at for auto-unseal.
+# The cluster's only Vault. It does two jobs:
+#
+#   1. exposes a `transit` secrets engine that the remote (WMS-DEV) Vault points its
+#      `seal "transit"` stanza at for auto-unseal - it is the root of trust for that
+#      instance, which is why it is named the way it is;
+#   2. stores this cluster's own secrets under `secret/`, which the Vault Secrets
+#      Operator materialises into app namespaces.
+#
+# It is *not* auto-unsealed by anything - it holds its own Shamir key shares and must
+# be unsealed manually with `vault operator unseal` after every restart. A second
+# Vault auto-unsealing against this one was tried and removed: it still needed this
+# instance unsealed by hand first, so it cost ~250Mi on an 8GB node to save exactly
+# zero manual steps. See README.md.
+#
+# Note that any change below which touches the pod template forces a restart, and so
+# a manual unseal afterwards. Ingress-only changes are safe.
 vault:
   injector:
     enabled: false
@@ -55,11 +66,15 @@ vault:
       hosts:
         - host: transit-vault.gruzin.eu
         - host: transit-vault.local.gruzin.eu
+        - host: vault.gruzin.eu
+        - host: vault.local.gruzin.eu
       tls:
         - secretName: transit-vault-tls
           hosts:
             - transit-vault.gruzin.eu
             - transit-vault.local.gruzin.eu
+            - vault.gruzin.eu
+            - vault.local.gruzin.eu
 
 # Name of the transit key the remote Vault's seal stanza will encrypt/decrypt
 # its master key with.

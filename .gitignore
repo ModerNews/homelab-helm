@@ -6,3 +6,13 @@ Chart.lock
 mail-secret.yaml
 argocd-secret.yaml
 vault-root-token.yaml
+
+# Terraform. State is kept in-cluster via the kubernetes backend, so no tfstate
+# should appear here at all - these are belt-and-braces in case someone runs with
+# `-backend=false` or migrates state out.
+# .terraform.lock.hcl is intentionally NOT ignored - it pins provider versions and
+# hashes, and belongs in git.
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
