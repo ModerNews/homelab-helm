@@ -60,10 +60,16 @@ immich:
               - path: "/"
                 service:
                   identifier: main
+          - host: immich.local.gruzin.eu
+            paths:
+              - path: "/"
+                service:
+                  identifier: main
         tls:
           - secretName: immich-tls
             hosts:
               - immich.gruzin.eu
+              - immich.local.gruzin.eu
 
   machine-learning:
     controllers:

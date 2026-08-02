@@ -29,7 +29,18 @@ spec:
                   number: 5055
             path: /
             pathType: Prefix
+    - host: jellyseerr.local.gruzin.eu
+      http:
+        paths:
+          - backend:
+              service:
+                name: jellyseerr
+                port:
+                  number: 5055
+            path: /
+            pathType: Prefix
   tls:
     - hosts:
         - jellyseerr.gruzin.eu
+        - jellyseerr.local.gruzin.eu
       secretName: jellyseerr-tls

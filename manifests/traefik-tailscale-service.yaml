@@ -1,0 +1,28 @@
+# Second Service in front of the same Traefik pods, exposed to the tailnet.
+#
+# Traefik's chart-managed Service keeps its MetalLB address for LAN clients. A
+# Service carries only one loadBalancerClass, so tailnet exposure needs its own
+# object rather than an annotation on the existing one.
+#
+# The Tailscale operator assigns this Service a stable 100.x address and it is
+# the target for every *.gruzin.eu record — see README "DNS layout".
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-tailscale
+  namespace: traefik
+  annotations:
+    tailscale.com/hostname: homelab-traefik
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: traefik
+    app.kubernetes.io/instance: traefik-traefik
+  ports:
+    - name: web
+      port: 80
+      targetPort: web
+    - name: websecure
+      port: 443
+      targetPort: websecure

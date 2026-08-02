@@ -5,3 +5,4 @@ Chart.lock
 # never committed.
 mail-secret.yaml
 argocd-secret.yaml
+vault-root-token.yaml

@@ -81,7 +81,13 @@ paperless-ngx:
             - path: "/"
               service:
                 identifier: main
+        - host: paperless.local.gruzin.eu
+          paths:
+            - path: "/"
+              service:
+                identifier: main
       tls:
         - secretName: paperless-tls
           hosts:
             - paperless.gruzin.eu
+            - paperless.local.gruzin.eu

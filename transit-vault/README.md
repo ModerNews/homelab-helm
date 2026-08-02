@@ -19,20 +19,52 @@ stanza). It is the root of trust, so it seals/unseals itself the normal way
    # repeat with 3 distinct key shares
    ```
 
-3. Put the root token in a secret the init Job can read:
+3. Using the root token, mint a narrowly-scoped token for the init Job instead
+   of handing it root - it only ever needs to mount `transit`, write one
+   policy, and issue one child token:
+
+   ```bash
+   kubectl exec -n transit-vault -it transit-vault-0 -- sh -c '
+     vault login <root token>
+
+     vault policy write transit-init - <<EOF
+   path "sys/mounts/transit" {
+     capabilities = ["create", "read", "update", "sudo"]
+   }
+   path "sys/policies/acl/transit-unseal" {
+     capabilities = ["create", "update"]
+   }
+   path "transit/keys/remote-vault-unseal" {
+     capabilities = ["create", "update"]
+   }
+   path "auth/token/create" {
+     capabilities = ["create", "update", "sudo"]
+   }
+   EOF
+
+     vault token create -orphan -policy=transit-init -period=768h -field=token
+   '
+   ```
+
+   The root token is only needed for this one session - discard it (or lock it
+   away offline) afterwards, don't store it in the cluster.
+
+4. Put the scoped token in the secret the init Job reads (still named after
+   the values.yaml `rootTokenSecretName` field, but holds the scoped token
+   from step 3, not the actual root token):
 
    ```bash
    cp vault-root-token.example.yaml vault-root-token.yaml
-   # fill in the real token
+   # fill in the token from step 3, not the root token
    kubectl apply -f vault-root-token.yaml
    ```
 
-4. Let the init Job (re)run - it enables the `transit` engine, creates the
+5. Let the init Job (re)run - it enables the `transit` engine, creates the
    `remote-vault-unseal` key and `transit-unseal` policy, and writes a
    periodic token into `secret/transit-vault-unseal-token`. It is idempotent
    and safe to re-run on every deploy - it leaves the token alone once created.
 
-5. Copy the token out to configure the remote Vault:
+6. Copy the token out to configure the remote Vault:
 
    ```bash
    kubectl get secret -n transit-vault transit-vault-unseal-token \
@@ -46,7 +78,7 @@ On the remote Vault instance, add:
 ```hcl
 seal "transit" {
   address         = "https://transit-vault.gruzin.eu"
-  token           = "<token from step 5>"
+  token           = "<token from step 6>"
   disable_renewal = "false"
   key_name        = "remote-vault-unseal"
   mount_path      = "transit/"

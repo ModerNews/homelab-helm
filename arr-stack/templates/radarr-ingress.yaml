@@ -29,7 +29,18 @@ spec:
                   number: 7878
             path: /
             pathType: Prefix
+    - host: radarr.bay.local.gruzin.eu
+      http:
+        paths:
+          - backend:
+              service:
+                name: radarr
+                port:
+                  number: 7878
+            path: /
+            pathType: Prefix
   tls:
     - hosts:
         - radarr.bay.gruzin.eu
+        - radarr.bay.local.gruzin.eu
       secretName: radarr-tls

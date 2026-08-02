@@ -147,6 +147,13 @@ argo-cd:
       tls: true
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
+      extraHosts:
+        - name: argocd.local.gruzin.eu
+          path: /
+      extraTls:
+        - hosts:
+            - argocd.local.gruzin.eu
+          secretName: argocd-local-tls
 
     resources:
       limits:
@@ -210,6 +217,13 @@ argo-cd:
       tls: true
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
+      extraHosts:
+        - name: argocd.local.gruzin.eu
+          path: /api/webhook
+      extraTls:
+        - hosts:
+            - argocd.local.gruzin.eu
+          secretName: argocd-appset-local-tls
 
     resources:
       limits:

@@ -30,7 +30,18 @@ spec:
                   number: 8080
             path: /
             pathType: Prefix
+    - host: qbittorrent.local.gruzin.eu
+      http:
+        paths:
+          - backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
   tls:
     - hosts:
         - qbittorrent.gruzin.eu
+        - qbittorrent.local.gruzin.eu
       secretName: qbittorrent-tls

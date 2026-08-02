@@ -20,6 +20,10 @@ spec:
           src: manifests/cert-manager-clusterissuer.yaml
           dstDir: /var/lib/k0s/manifests/cert-manager/
           perm: 0644
+        - name: traefik-tailscale-service
+          src: manifests/traefik-tailscale-service.yaml
+          dstDir: /var/lib/k0s/manifests/traefik/
+          perm: 0644
   k0s:
     version: 1.35.1+k0s.0
     config:
@@ -49,6 +53,8 @@ spec:
                 url: https://kubernetes-sigs.github.io/external-dns
               - name: local-path-provisioner
                 url: https://charts.containeroo.ch
+              - name: tailscale
+                url: https://pkgs.tailscale.com/helmcharts
             charts:
               - name: metallb
                 chartname: metallb/metallb
@@ -64,6 +70,9 @@ spec:
                   crds:
                     enabled: true
                   replicaCount: 1
+                  extraArgs:
+                    - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+                    - --dns01-recursive-nameservers-only=true
                   resources:
                     requests:
                       cpu: 25m
@@ -107,7 +116,7 @@ spec:
                   ingressRoute:
                     dashboard:
                       enabled: true
-                      matchRule: Host(`traefik.gruzin.eu`)
+                      matchRule: Host(`traefik.gruzin.eu`) || Host(`traefik.local.gruzin.eu`)
                       entryPoints:
                         - websecure
                   providers:
@@ -130,11 +139,21 @@ spec:
                     defaultClass: true
                     name: local-path
                     reclaimPolicy: Delete
+              - name: tailscale-operator
+                chartname: tailscale/tailscale-operator
+                version: "1.90.8"
+                namespace: tailscale
+                order: 5
+                values: |2
+                  operatorConfig:
+                    hostname: homelab-tailscale-operator
+                  apiServerProxyConfig:
+                    mode: "false"
               - name: external-dns
                 chartname: external-dns/external-dns
                 version: "1.20.0"
                 namespace: external-dns
-                order: 5
+                order: 6
                 values: |2
                   provider:
                     name: cloudflare
@@ -146,10 +165,43 @@ spec:
                           key: api-token
                   domainFilters:
                     - gruzin.eu
+                  excludeDomains:
+                    - local.gruzin.eu
+                  extraArgs:
+                    - --default-targets=100.66.99.29
                   policy: sync
                   sources:
                     - ingress
                   txtOwnerId: homelab
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 32Mi
+                    limits:
+                      cpu: 100m
+                      memory: 128Mi
+              - name: external-dns-local
+                chartname: external-dns/external-dns
+                version: "1.20.0"
+                namespace: external-dns
+                order: 7
+                values: |2
+                  provider:
+                    name: cloudflare
+                  env:
+                    - name: CF_API_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: cloudflare-api-token
+                          key: api-token
+                  domainFilters:
+                    - local.gruzin.eu
+                  extraArgs:
+                    - --default-targets=192.168.0.240
+                  policy: sync
+                  sources:
+                    - ingress
+                  txtOwnerId: homelab-local
                   resources:
                     requests:
                       cpu: 10m
