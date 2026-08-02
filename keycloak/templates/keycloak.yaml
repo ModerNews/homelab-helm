@@ -22,7 +22,6 @@ metadata:
   name: keycloak
 spec:
   instances: 1
-  image: quay.io/keycloak/keycloak:{{ .Values.image.tag }}
   db:
     vendor: postgres
     host: keycloak-database-rw

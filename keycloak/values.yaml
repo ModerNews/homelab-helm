@@ -2,8 +2,11 @@ host: sso.gruzin.eu
 localHost: sso.local.gruzin.eu
 realm: homelab
 
-image:
-  tag: "26.7.0"
+# Where the operator runs. Only used to bind it the extra in-namespace permissions
+# it needs to manage an instance here - see templates/operator-rbac.yaml.
+operator:
+  namespace: keycloak-operator
+  serviceAccount: keycloak-operator
 
 resources:
   requests:
