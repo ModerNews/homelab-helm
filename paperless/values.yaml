@@ -2,6 +2,9 @@ paperless-ngx:
   env:
     TZ: Europe/Warsaw
     PAPERLESS_URL: https://paperless.gruzin.eu
+    PAPERLESS_ALLOWED_HOSTS: paperless.gruzin.eu,paperless.local.gruzin.eu
+    PAPERLESS_CSRF_TRUSTED_ORIGINS: https://paperless.gruzin.eu,https://paperless.local.gruzin.eu
+    PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.gruzin.eu,https://paperless.local.gruzin.eu
     PAPERLESS_DBENGINE: postgresql
     PAPERLESS_DBHOST:
       valueFrom:
