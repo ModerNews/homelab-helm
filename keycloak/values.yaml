@@ -1,0 +1,27 @@
+host: sso.gruzin.eu
+localHost: sso.local.gruzin.eu
+realm: homelab
+
+image:
+  tag: "26.7.0"
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 768Mi
+  limits:
+    memory: 1536Mi
+
+groups:
+  - argocd-admins
+
+# The issuer clients point at is `https://{{ host }}/realms/{{ realm }}`, but it is
+# NOT configurable from here - each app's chart is rendered by its own Application
+# and cannot read these values, so the URL is repeated in:
+#
+#   ArgoCD/values.yaml     oidc.config issuer
+#   paperless/values.yaml  oidc.issuerUrl
+#   immich/values.yaml     immich.immich.configuration.oauth.issuerUrl
+#
+# Changing `host` or `realm` above means changing those three too. That duplication
+# is the cost of each app owning its own client.

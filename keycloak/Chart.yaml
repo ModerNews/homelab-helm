@@ -1,0 +1,12 @@
+apiVersion: v2
+name: keycloak
+description: Keycloak instance, realm and OIDC clients, expressed as operator custom resources
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
+
+# No dependencies: Keycloak itself is deployed by the operator from the Keycloak CR
+# in templates/, not from an upstream chart.

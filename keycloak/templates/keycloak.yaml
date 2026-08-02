@@ -1,0 +1,85 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: keycloak-database
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  instances: 1
+  storage:
+    size: 5Gi
+    storageClass: local-path
+  bootstrap:
+    initdb:
+      database: keycloak
+      owner: keycloak
+  monitoring:
+    enablePodMonitor: true
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: keycloak
+spec:
+  instances: 1
+  image: quay.io/keycloak/keycloak:{{ .Values.image.tag }}
+  db:
+    vendor: postgres
+    host: keycloak-database-rw
+    database: keycloak
+    usernameSecret:
+      name: keycloak-database-app
+      key: username
+    passwordSecret:
+      name: keycloak-database-app
+      key: password
+
+  features:
+    enabled:
+      # Required for the KeycloakOIDCClient CRs in oidc-clients.yaml to work at all -
+      # without it the operator has no client management API to call.
+      - client-admin-api:v2
+
+  hostname:
+    hostname: https://{{ .Values.host }}
+
+  http:
+    # TLS terminates at Traefik, matching every other ingress in this cluster.
+    httpEnabled: true
+
+  ingress:
+    # Disabled in favour of the Ingress below: the operator's built-in ingress only
+    # covers `hostname.hostname`, and this cluster serves every app on both a tailnet
+    # and a LAN hostname.
+    enabled: false
+
+  resources:
+    {{- toYaml .Values.resources | nindent 4 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  rules:
+    {{- range list .Values.host .Values.localHost }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                # The operator names the Service after the Keycloak CR.
+                name: keycloak-service
+                port:
+                  number: 8080
+    {{- end }}
+  tls:
+    - secretName: sso-tls
+      hosts:
+        - {{ .Values.host | quote }}
+        - {{ .Values.localHost | quote }}

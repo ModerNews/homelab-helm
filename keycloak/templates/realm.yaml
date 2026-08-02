@@ -1,0 +1,39 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakRealmImport
+metadata:
+  name: {{ .Values.realm }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  keycloakCRName: keycloak
+  realm:
+    realm: {{ .Values.realm }}
+    enabled: true
+    displayName: Homelab
+    clientScopes:
+      - name: groups
+        protocol: openid-connect
+        includeInTokenScope: true
+        attributes:
+          "include.in.token.scope": "true"
+          "display.on.consent.screen": "false"
+        protocolMappers:
+          - name: groups
+            protocol: openid-connect
+            protocolMapper: oidc-group-membership-mapper
+            config:
+              "claim.name": groups
+              "full.path": "false"
+              "id.token.claim": "true"
+              "access.token.claim": "true"
+              "userinfo.token.claim": "true"
+
+    defaultDefaultClientScopes:
+      - groups
+
+    {{- with .Values.groups }}
+    groups:
+      {{- range . }}
+      - name: {{ . | quote }}
+      {{- end }}
+    {{- end }}

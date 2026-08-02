@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-8"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ModerNews/homelab-helm.git
+    targetRevision: HEAD
+    path: keycloak
+    helm:
+      releaseName: keycloak
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  # No ignoreDifferences anywhere in this setup: every credential comes from Vault via
+  # VSO rather than being generated at render time, so a re-sync is a no-op.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
