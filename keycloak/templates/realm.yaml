@@ -13,7 +13,6 @@ spec:
     clientScopes:
       - name: groups
         protocol: openid-connect
-        includeInTokenScope: true
         attributes:
           "include.in.token.scope": "true"
           "display.on.consent.screen": "false"
