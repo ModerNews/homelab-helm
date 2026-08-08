@@ -71,6 +71,156 @@ argo-cd:
       timeout.hard.reconciliation: 0s
       statusbadge.enabled: false
 
+      # VSO custom resources report readiness through status conditions ArgoCD does
+      # not understand natively, so without these every VaultStaticSecret sits at
+      # "Progressing" forever and an app that depends on one never reports Healthy.
+      # Adapted from the wmsdev cluster's ArgoCD config.
+      resource.customizations.health.secrets.hashicorp.com_VaultStaticSecret: |
+        hs = {}
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Healthy" then
+              if c.status == "True" then
+                hs.status = "Healthy"
+                hs.message = "Secret is healthy"
+                return hs
+              else
+                hs.status = "Degraded"
+                hs.message = c.message or "VaultStaticSecret is not healthy"
+                return hs
+              end
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for VSO to initialize conditions..."
+        return hs
+
+      resource.customizations.health.secrets.hashicorp.com_VaultDynamicSecret: |
+        hs = {}
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          local syncedCondition = nil
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "SecretSynced" then
+              syncedCondition = c
+              break
+            end
+          end
+
+          if syncedCondition ~= nil then
+            if syncedCondition.observedGeneration ~= nil
+               and obj.metadata.generation ~= nil
+               and syncedCondition.observedGeneration < obj.metadata.generation then
+              hs.status = "Progressing"
+              hs.message = "Dynamic secret is reconciling new lease..."
+              return hs
+            end
+
+            if syncedCondition.status == "True" then
+              hs.status = "Healthy"
+              hs.message = "Dynamic lease acquired and Secret synced"
+              return hs
+            elseif syncedCondition.status == "False" then
+              hs.status = "Degraded"
+              hs.message = syncedCondition.message or "Failed to acquire dynamic lease"
+              return hs
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for dynamic secret initialization..."
+        return hs
+
+      resource.customizations.health.secrets.hashicorp.com_VaultPKISecret: |
+        hs = {}
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          local syncedCondition = nil
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "SecretSynced" then
+              syncedCondition = c
+              break
+            end
+          end
+
+          if syncedCondition ~= nil then
+            if syncedCondition.observedGeneration ~= nil
+               and obj.metadata.generation ~= nil
+               and syncedCondition.observedGeneration < obj.metadata.generation then
+              hs.status = "Progressing"
+              hs.message = "PKI certificate is reconciling..."
+              return hs
+            end
+
+            if syncedCondition.status == "True" then
+              hs.status = "Healthy"
+              hs.message = "PKI certificate issued and synced"
+              return hs
+            elseif syncedCondition.status == "False" then
+              hs.status = "Degraded"
+              hs.message = syncedCondition.message or "Failed to issue PKI certificate"
+              return hs
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for PKI certificate initialization..."
+        return hs
+
+      resource.customizations.health.secrets.hashicorp.com_VaultAuth: |
+        hs = {}
+        if obj.status ~= nil then
+          -- VaultAuth specifically uses a 'valid' boolean field in some versions
+          if obj.status.valid ~= nil and obj.status.valid == false then
+            hs.status = "Degraded"
+            hs.message = "VaultAuth configuration is invalid"
+            return hs
+          end
+
+          if obj.status.conditions ~= nil then
+            for _, c in ipairs(obj.status.conditions) do
+              if c.type == "Ready" or c.type == "Healthy" then
+                if c.observedGeneration ~= nil
+                   and obj.metadata.generation ~= nil
+                   and c.observedGeneration < obj.metadata.generation then
+                  hs.status = "Progressing"
+                  hs.message = "VaultAuth is reconciling..."
+                  return hs
+                end
+
+                if c.status == "True" then
+                  hs.status = "Healthy"
+                  hs.message = "Vault authentication is ready"
+                  return hs
+                elseif c.status == "False" then
+                  hs.status = "Degraded"
+                  hs.message = c.message or "Authentication setup failed"
+                  return hs
+                end
+              end
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Establishing Vault authentication..."
+        return hs
+
+      # VSO writes status and finalizers back onto its own CRs, which would
+      # otherwise show as permanent drift.
+      resource.customizations.ignoreDifferences.secrets.hashicorp.com_VaultAuth: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
+      resource.customizations.ignoreDifferences.secrets.hashicorp.com_VaultStaticSecret: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
+      resource.customizations.ignoreDifferences.secrets.hashicorp.com_VaultDynamicSecret: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
     params:
       create: true
       server.insecure: true
