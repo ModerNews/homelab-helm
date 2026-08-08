@@ -1,0 +1,9 @@
+apiVersion: v2
+name: home-assistant
+description: Ingress that proxies home.gruzin.eu to the Home Assistant box on the LAN
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

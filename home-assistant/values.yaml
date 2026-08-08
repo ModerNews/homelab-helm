@@ -1,0 +1,13 @@
+upstream:
+  address: 192.168.0.250
+  port: 8123
+
+ingress:
+  enabled: true
+  className: traefik
+  host: home.gruzin.eu
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: true
+    secretName: home-assistant-tls
