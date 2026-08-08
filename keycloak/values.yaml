@@ -1,6 +1,18 @@
 host: sso.gruzin.eu
 realm: homelab
 
+# Name of the Keycloak CR (templates/keycloak.yaml)
+keycloakCRName: keycloak
+
+# Credential the operator authenticates to the admin API with
+adminCredential:
+  enabled: true
+  vault:
+    address: http://transit-vault.transit-vault.svc.cluster.local:8200
+    mount: secret
+    path: keycloak/admin
+    refreshAfter: 1h
+
 # Where the operator runs. Only used to bind it the extra in-namespace permissions
 # it needs to manage an instance here - see templates/operator-rbac.yaml.
 operator:
