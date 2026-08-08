@@ -225,6 +225,158 @@ argo-cd:
           - '.status'
           - '.metadata.finalizers'
 
+      # The Keycloak operator reports through conditions ArgoCD cannot read either.
+      #
+      # KeycloakOIDCClient has NO Ready/Done condition - per the operator docs the
+      # success state is `HasErrors: false` and that is the only condition shown:
+      # https://www.keycloak.org/operator/managing-clients
+      # So absence of errors is what means Healthy here, unlike the Keycloak CR below.
+      #
+      # `status` is compared case-insensitively via tostring(): the CRD schema types
+      # it as a string ("True"), but the operator historically emitted YAML booleans
+      # (keycloak/keycloak#13074) and the docs render it lowercase.
+      resource.customizations.health.k8s.keycloak.org_KeycloakOIDCClient: |
+        hs = {}
+        local function isTrue(v)
+          if v == nil then return false end
+          return string.lower(tostring(v)) == "true"
+        end
+
+        if obj.status ~= nil then
+          -- operator has not caught up with the current spec yet
+          if obj.status.observedGeneration ~= nil
+             and obj.metadata.generation ~= nil
+             and obj.status.observedGeneration < obj.metadata.generation then
+            hs.status = "Progressing"
+            hs.message = "Waiting for the operator to reconcile the client..."
+            return hs
+          end
+
+          if obj.status.conditions ~= nil then
+            local sawHasErrors = false
+            for _, c in ipairs(obj.status.conditions) do
+              if c.type == "HasErrors" then
+                sawHasErrors = true
+                if isTrue(c.status) then
+                  hs.status = "Degraded"
+                  if c.message ~= nil and c.message ~= "" then
+                    hs.message = c.message
+                  else
+                    hs.message = "Keycloak reported errors for this client"
+                  end
+                  return hs
+                end
+              end
+              -- tolerate a Ready/Done condition if a later operator adds one
+              if (c.type == "Ready" or c.type == "Done") and isTrue(c.status) then
+                hs.status = "Healthy"
+                hs.message = "Client registered in Keycloak"
+                return hs
+              end
+            end
+
+            if sawHasErrors then
+              hs.status = "Healthy"
+              hs.message = "Client registered in Keycloak"
+              return hs
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for the Keycloak operator to report status..."
+        return hs
+
+      # The Keycloak CR, unlike the client CR, does report Ready - so require it.
+      resource.customizations.health.k8s.keycloak.org_Keycloak: |
+        hs = {}
+        local function isTrue(v)
+          if v == nil then return false end
+          return string.lower(tostring(v)) == "true"
+        end
+
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "HasErrors" and isTrue(c.status) then
+              hs.status = "Degraded"
+              hs.message = c.message or "Keycloak reported errors"
+              return hs
+            end
+          end
+
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Ready" then
+              if isTrue(c.status) then
+                hs.status = "Healthy"
+                hs.message = "Keycloak is ready"
+                return hs
+              else
+                hs.status = "Progressing"
+                if c.message ~= nil and c.message ~= "" then
+                  hs.message = c.message
+                else
+                  hs.message = "Keycloak is starting..."
+                end
+                return hs
+              end
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for Keycloak to report status..."
+        return hs
+
+      # KeycloakRealmImport reports Done/Started/HasErrors.
+      resource.customizations.health.k8s.keycloak.org_KeycloakRealmImport: |
+        hs = {}
+        local function isTrue(v)
+          if v == nil then return false end
+          return string.lower(tostring(v)) == "true"
+        end
+
+        if obj.status ~= nil and obj.status.conditions ~= nil then
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "HasErrors" and isTrue(c.status) then
+              hs.status = "Degraded"
+              hs.message = c.message or "Realm import failed"
+              return hs
+            end
+          end
+
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Done" then
+              if isTrue(c.status) then
+                hs.status = "Healthy"
+                hs.message = "Realm imported"
+                return hs
+              else
+                hs.status = "Progressing"
+                hs.message = "Realm import in progress..."
+                return hs
+              end
+            end
+          end
+        end
+        hs.status = "Progressing"
+        hs.message = "Waiting for realm import to report status..."
+        return hs
+
+      # The operator writes status, a content hash and the Keycloak-side UUID back
+      # onto its own CRs, plus a finalizer to deregister the client on delete.
+      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakOIDCClient: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
+      resource.customizations.ignoreDifferences.k8s.keycloak.org_Keycloak: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
+      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakRealmImport: |
+        jqPathExpressions:
+          - '.status'
+          - '.metadata.finalizers'
+
     params:
       create: true
       server.insecure: true
