@@ -1,3 +1,26 @@
+# Keycloak client for Immich, rendered by templates/oidc-client.yaml. The credential
+# comes from Vault via VSO; the resulting Secret is consumed both by the
+# KeycloakOIDCClient (which configures Keycloak) and by the render-config init
+# container below.
+oidc:
+  enabled: true
+  clientId: immich
+  displayName: Immich
+  keycloakCRName: keycloak
+  realm: homelab
+  # Credential source. VSO reads this KV entry and writes Secret/oidc-immich into
+  # this namespace; the entry holds a single `client_secret` key.
+  vault:
+    mount: secret
+    path: oidc/immich
+    refreshAfter: 1h
+  # Immich needs the mobile-app scheme as well as the web hostname, and it
+  # redirects to /user-settings when linking OAuth to an existing account.
+  redirectUris:
+    - https://immich.gruzin.eu/auth/login
+    - https://immich.gruzin.eu/user-settings
+    - app.immich:///oauth-callback
+
 immich:
   controllers:
     main:
@@ -23,6 +46,24 @@ immich:
       library:
         watch:
           enabled: true
+      # SSO via Keycloak. Immich has no env-var interpolation in its config file and
+      # makes these settings read-only in the admin UI once IMMICH_CONFIG_FILE is
+      # set, so the credential cannot be entered by hand either. The placeholder
+      # below is substituted at pod start by the `render-config` init container (see
+      # server.controllers.main.initContainers) from Secret/oidc-immich, which
+      # templates/oidc-client.yaml pulls out of Vault.
+      oauth:
+        enabled: true
+        issuerUrl: https://sso.gruzin.eu/realms/homelab
+        clientId: immich
+        clientSecret: __OIDC_CLIENT_SECRET__
+        scope: openid email profile
+        buttonText: Login with Keycloak
+        # Immich accounts are created on first Keycloak login.
+        autoRegister: true
+        # Keep the local password form reachable as a fallback if Keycloak is down.
+        autoLaunch: false
+        storageLabelClaim: preferred_username
 
   valkey:
     enabled: true
@@ -40,14 +81,53 @@ immich:
   server:
     controllers:
       main:
+        initContainers:
+          # Substitutes the OAuth placeholders in the chart-rendered config (mounted
+          # read-only from a ConfigMap at /config) into an emptyDir the server reads
+          # instead. This is the only way to get a secret into Immich's config file -
+          # see the comment on immich.configuration.oauth above.
+          render-config:
+            image:
+              repository: busybox
+              tag: "1.37.0"
+            command:
+              - /bin/sh
+              - -c
+              - |
+                set -eu
+                sed -e "s|__OIDC_CLIENT_SECRET__|${OIDC_CLIENT_SECRET}|g" \
+                    /config/immich-config.yaml > /rendered/immich-config.yaml
+            env:
+              OIDC_CLIENT_SECRET:
+                valueFrom:
+                  secretKeyRef:
+                    name: oidc-immich
+                    key: client_secret
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                memory: 32Mi
         containers:
           main:
+            env:
+              # Overrides the chart's default of /config/immich-config.yaml so the
+              # server reads the substituted copy rather than the placeholder one.
+              IMMICH_CONFIG_FILE: /rendered/immich-config.yaml
             resources:
               requests:
                 cpu: 50m
                 memory: 256Mi
               limits:
                 memory: 2Gi
+
+    persistence:
+      rendered-config:
+        type: emptyDir
+        globalMounts:
+          - path: /rendered
+
     ingress:
       main:
         enabled: true
@@ -60,16 +140,10 @@ immich:
               - path: "/"
                 service:
                   identifier: main
-          - host: immich.local.gruzin.eu
-            paths:
-              - path: "/"
-                service:
-                  identifier: main
         tls:
           - secretName: immich-tls
             hosts:
               - immich.gruzin.eu
-              - immich.local.gruzin.eu
 
   machine-learning:
     controllers:

@@ -29,18 +29,7 @@ spec:
                   number: 8989
             path: /
             pathType: Prefix
-    - host: sonarr.bay.local.gruzin.eu
-      http:
-        paths:
-          - backend:
-              service:
-                name: sonarr
-                port:
-                  number: 8989
-            path: /
-            pathType: Prefix
   tls:
     - hosts:
         - sonarr.bay.gruzin.eu
-        - sonarr.bay.local.gruzin.eu
       secretName: sonarr-tls

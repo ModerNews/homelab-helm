@@ -5,7 +5,9 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.0.240-192.168.0.250
+    # Must not overlap the router's DHCP pool (192.168.0.100-192.168.0.239) and
+    # must stop short of .250, which is a statically-addressed Raspberry Pi.
+    - 192.168.0.240-192.168.0.249
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

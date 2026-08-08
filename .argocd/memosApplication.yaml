@@ -8,6 +8,9 @@ metadata:
 spec:
   project: default
   sources:
+    # The upstream memos chart is published only as a git repo - there is no Helm
+    # repository behind it, so it cannot be a `dependencies:` entry the way
+    # immich/paperless/arr-stack wrap theirs.
     - repoURL: https://github.com/usememos/helm.git
       targetRevision: HEAD
       path: .
@@ -15,6 +18,13 @@ spec:
         releaseName: memos
         valueFiles:
           - $values/memos/values.yaml
+    # Consequently the Keycloak client this repo owns needs its own local chart
+    # rather than a templates/ directory inside the upstream one.
+    - repoURL: https://github.com/ModerNews/homelab-helm.git
+      targetRevision: HEAD
+      path: memos
+      helm:
+        releaseName: memos-oidc
     - repoURL: https://github.com/ModerNews/homelab-helm.git
       targetRevision: HEAD
       ref: values

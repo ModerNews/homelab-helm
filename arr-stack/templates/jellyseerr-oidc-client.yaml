@@ -1,0 +1,53 @@
+{{- with .Values.jellyseerrOidc }}
+{{- if .enabled }}
+{{- /*
+Jellyseerr's Keycloak client, owned by the app that uses it.
+
+The credential is never generated here - it lives in Vault at
+`secret/oidc/jellyseerr` and VSO materialises it into this namespace, where the
+Keycloak operator reads it through auth.secretRef.
+
+Jellyseerr itself is not wired up: its OIDC support is still behind the
+`preview-new-oidc` image tag, which jellyseerr-deployment.yaml does not pin, and it
+has no automatic account linking. The client exists so adopting it later is an image
+bump plus a one-time pairing from Secret/oidc-jellyseerr.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  type: kv-v2
+  mount: {{ .vault.mount | quote }}
+  path: {{ .vault.path | quote }}
+  refreshAfter: {{ .vault.refreshAfter | quote }}
+  destination:
+    name: {{ printf "oidc-%s" .clientId }}
+    create: true
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: {{ .clientId }}
+spec:
+  keycloakCRName: {{ .keycloakCRName | quote }}
+  realm: {{ .realm | quote }}
+  client:
+    # metadata.name above is the clientId - the CR has no separate field for it.
+    displayName: {{ .displayName | quote }}
+    enabled: true
+    loginFlows:
+      - STANDARD
+    redirectUris:
+      {{- range .redirectUris }}
+      - {{ . | quote }}
+      {{- end }}
+    auth:
+      method: client-secret
+      secretRef:
+        name: {{ printf "oidc-%s" .clientId }}
+        key: client_secret
+{{- end }}
+{{- end }}

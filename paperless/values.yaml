@@ -1,10 +1,31 @@
+# Keycloak client for Paperless, rendered by templates/oidc-client.yaml. The
+# credential comes from Vault via VSO, which also renders
+# PAPERLESS_SOCIALACCOUNT_PROVIDERS from it - allauth wants the whole provider config
+# as one JSON string with the secret inside it.
+oidc:
+  enabled: true
+  clientId: paperless
+  displayName: Paperless-ngx
+  keycloakCRName: keycloak
+  realm: homelab
+  # Credential source. VSO reads this KV entry and writes Secret/oidc-paperless into
+  # this namespace; the entry holds a single `client_secret` key.
+  vault:
+    mount: secret
+    path: oidc/paperless
+    refreshAfter: 1h
+  issuerUrl: https://sso.gruzin.eu/realms/homelab
+  # django-allauth's OIDC callback path is /accounts/oidc/<provider_id>/login/callback/
+  # where provider_id is the "keycloak" id set in the template.
+  redirectUris:
+    - https://paperless.gruzin.eu/accounts/oidc/keycloak/login/callback/
+
 paperless-ngx:
   env:
     TZ: Europe/Warsaw
+    # Single hostname, so paperless derives ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS
+    # and CORS_ALLOWED_HOSTS from this on its own - no overrides needed.
     PAPERLESS_URL: https://paperless.gruzin.eu
-    PAPERLESS_ALLOWED_HOSTS: paperless.gruzin.eu,paperless.local.gruzin.eu
-    PAPERLESS_CSRF_TRUSTED_ORIGINS: https://paperless.gruzin.eu,https://paperless.local.gruzin.eu
-    PAPERLESS_CORS_ALLOWED_HOSTS: https://paperless.gruzin.eu,https://paperless.local.gruzin.eu
     PAPERLESS_DBENGINE: postgresql
     PAPERLESS_DBHOST:
       valueFrom:
@@ -36,6 +57,21 @@ paperless-ngx:
         secretKeyRef:
           name: paperless-admin
           key: password
+
+    # SSO via Keycloak. django-allauth takes its whole provider config as one JSON
+    # blob with the client secret embedded, so VSO renders that key straight from the
+    # Vault value - see templates/oidc-client.yaml.
+    # The local admin login stays enabled as a fallback if Keycloak is down.
+    PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+    PAPERLESS_SOCIALACCOUNT_PROVIDERS:
+      valueFrom:
+        secretKeyRef:
+          name: oidc-paperless
+          key: PAPERLESS_SOCIALACCOUNT_PROVIDERS
+    # Create a Paperless user on first Keycloak login instead of requiring one to
+    # be provisioned by hand first.
+    PAPERLESS_SOCIAL_AUTO_SIGNUP: "true"
+    PAPERLESS_ACCOUNT_DEFAULT_HTTP_PROTOCOL: https
 
   resources:
     requests:
@@ -84,13 +120,7 @@ paperless-ngx:
             - path: "/"
               service:
                 identifier: main
-        - host: paperless.local.gruzin.eu
-          paths:
-            - path: "/"
-              service:
-                identifier: main
       tls:
         - secretName: paperless-tls
           hosts:
             - paperless.gruzin.eu
-            - paperless.local.gruzin.eu

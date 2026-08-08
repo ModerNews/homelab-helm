@@ -1,3 +1,23 @@
+# Keycloak client for Memos, rendered by templates/oidc-client.yaml. Memos is not
+# wired up to it yet - SSO is UI-only, see the comment in that template.
+#
+# This file is consumed twice: by the upstream memos chart (which ignores the `oidc`
+# key) and by this repo's own chart for the client below.
+oidc:
+  enabled: true
+  clientId: memos
+  displayName: Memos
+  keycloakCRName: keycloak
+  realm: homelab
+  # Credential source. VSO reads this KV entry and writes Secret/oidc-memos into
+  # this namespace; the entry holds a single `client_secret` key.
+  vault:
+    mount: secret
+    path: oidc/memos
+    refreshAfter: 1h
+  redirectUris:
+    - https://memos.gruzin.eu/auth/callback
+
 persistence:
   enabled: true
   size: 5Gi
@@ -14,12 +34,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-    - host: memos.local.gruzin.eu
-      paths:
-        - path: /
-          pathType: Prefix
   tls:
     - secretName: memos-tls
       hosts:
         - memos.gruzin.eu
-        - memos.local.gruzin.eu

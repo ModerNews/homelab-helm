@@ -1,3 +1,20 @@
+# Keycloak client for Jellyseerr, rendered by templates/jellyseerr-oidc-client.yaml.
+# Jellyseerr is not wired up to it yet - see the comment in that template.
+jellyseerrOidc:
+  enabled: true
+  clientId: jellyseerr
+  displayName: Jellyseerr
+  keycloakCRName: keycloak
+  realm: homelab
+  # Credential source. VSO reads this KV entry and writes Secret/oidc-jellyseerr into
+  # this namespace; the entry holds a single `client_secret` key.
+  vault:
+    mount: secret
+    path: oidc/jellyseerr
+    refreshAfter: 1h
+  redirectUris:
+    - https://jellyseerr.gruzin.eu/login?provider=keycloak&callback=true
+
 jellyfin:
   image:
     pullPolicy: Always
@@ -34,15 +51,10 @@ jellyfin:
         paths:
           - path: /
             pathType: Prefix
-      - host: jellyfin.local.gruzin.eu
-        paths:
-          - path: /
-            pathType: Prefix
     tls:
       - secretName: jellyfin-tls
         hosts:
           - jellyfin.gruzin.eu
-          - jellyfin.local.gruzin.eu
 
   volumes:
     - name: tv

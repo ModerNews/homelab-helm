@@ -1,0 +1,14 @@
+apiVersion: v2
+name: vault-secrets-operator
+description: Materialises Vault KV entries into Kubernetes Secrets in any namespace
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
+
+dependencies:
+  - name: vault-secrets-operator
+    version: "1.5.0"
+    repository: "https://helm.releases.hashicorp.com"

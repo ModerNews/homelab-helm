@@ -29,18 +29,7 @@ spec:
                   number: 9696
             path: /
             pathType: Prefix
-    - host: prowlarr.bay.local.gruzin.eu
-      http:
-        paths:
-          - backend:
-              service:
-                name: prowlarr
-                port:
-                  number: 9696
-            path: /
-            pathType: Prefix
   tls:
     - hosts:
         - prowlarr.bay.gruzin.eu
-        - prowlarr.bay.local.gruzin.eu
       secretName: prowlarr-tls

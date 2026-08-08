@@ -1,0 +1,40 @@
+# VSO turns Vault KV entries into Kubernetes Secrets. A `VaultStaticSecret` creates
+# its Secret in its own namespace, and each app declares its own next to the
+# KeycloakOIDCClient that consumes it - e.g. immich/templates/oidc-client.yaml.
+vault-secrets-operator:
+  controller:
+    replicas: 1
+
+    manager:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+
+  # A single VaultConnection named `default` in this namespace, used by every
+  # VaultStaticSecret that doesn't name its own.
+  # transit-vault is the cluster's only Vault - it serves both the transit engine for
+  # the remote instance and this cluster's own `secret/` KV mount.
+  defaultVaultConnection:
+    enabled: true
+    address: http://transit-vault.transit-vault.svc.cluster.local:8200
+
+  # Likewise a single VaultAuth. `allowedNamespaces: ["*"]` lets CRs in any namespace
+  # use it; what they can actually read is bounded by the Vault policy attached to
+  # the `vso` role, not by this list.
+  #
+  # The role binds the `default` ServiceAccount of the consuming namespaces - see
+  # vault/README.md. On a single-tenant homelab that is a reasonable trade for not
+  # maintaining a ServiceAccount and Vault role per app; revisit it if the cluster
+  # ever hosts something untrusted.
+  defaultAuthMethod:
+    enabled: true
+    allowedNamespaces:
+      - "*"
+    method: kubernetes
+    mount: kubernetes
+    kubernetes:
+      role: vso
+      serviceAccount: default

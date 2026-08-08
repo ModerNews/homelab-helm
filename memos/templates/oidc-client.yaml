@@ -1,0 +1,53 @@
+{{- with .Values.oidc }}
+{{- if .enabled }}
+{{- /*
+Memos' Keycloak client, owned by the app that uses it.
+
+The credential is never generated here - it lives in Vault at `secret/oidc/memos`
+and VSO materialises it into this namespace, where the Keycloak operator reads it
+through auth.secretRef.
+
+Memos itself is not wired up: SSO can only be configured through its instance
+settings UI (Settings > SSO > Create > OAuth2, custom template), with no
+config-file or env-var equivalent. The client and credential exist so that pairing
+is a copy out of Secret/oidc-memos rather than a click-through in Keycloak too.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  type: kv-v2
+  mount: {{ .vault.mount | quote }}
+  path: {{ .vault.path | quote }}
+  refreshAfter: {{ .vault.refreshAfter | quote }}
+  destination:
+    name: {{ printf "oidc-%s" .clientId }}
+    create: true
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: {{ .clientId }}
+spec:
+  keycloakCRName: {{ .keycloakCRName | quote }}
+  realm: {{ .realm | quote }}
+  client:
+    # metadata.name above is the clientId - the CR has no separate field for it.
+    displayName: {{ .displayName | quote }}
+    enabled: true
+    loginFlows:
+      - STANDARD
+    redirectUris:
+      {{- range .redirectUris }}
+      - {{ . | quote }}
+      {{- end }}
+    auth:
+      method: client-secret
+      secretRef:
+        name: {{ printf "oidc-%s" .clientId }}
+        key: client_secret
+{{- end }}
+{{- end }}

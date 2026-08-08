@@ -1,3 +1,24 @@
+# Keycloak client for ArgoCD, rendered by templates/oidc-client.yaml. The credential
+# comes from Vault via VSO; `oidc.config` below dereferences the resulting Secret as
+# `$oidc-argocd:client_secret`.
+oidc:
+  enabled: true
+  clientId: argocd
+  displayName: ArgoCD
+  keycloakCRName: keycloak
+  realm: homelab
+  # Credential source. VSO reads this KV entry and writes Secret/oidc-argocd into
+  # this namespace; the entry holds a single `client_secret` key.
+  vault:
+    mount: secret
+    path: oidc/argocd
+    refreshAfter: 1h
+  # /auth/callback is the web UI; the localhost URI is what `argocd login --sso`
+  # uses for the CLI's loopback flow.
+  redirectUris:
+    - https://argocd.gruzin.eu/auth/callback
+    - http://localhost:8085/auth/callback
+
 ## Argo CD configuration
 ## Chart: https://github.com/argoproj/argo-helm
 ## Ref: https://github.com/argoproj/argo-cd
@@ -30,6 +51,22 @@ argo-cd:
       application.sync.impersonation.enabled: false
       exec.enabled: false
       admin.enabled: true
+      # SSO via Keycloak. clientSecret is a `$<secret>:<key>` reference into the
+      # `oidc-argocd` Secret, which templates/oidc-client.yaml pulls out of Vault -
+      # along with the `part-of: argocd` label ArgoCD requires before it will
+      # resolve such references.
+      # The `groups` scope is declared in the realm import and made a default client
+      # scope there, so the RBAC policy below can match Keycloak group names.
+      oidc.config: |
+        name: Keycloak
+        issuer: https://sso.gruzin.eu/realms/homelab
+        clientID: argocd
+        clientSecret: $oidc-argocd:client_secret
+        requestedScopes:
+          - openid
+          - profile
+          - email
+          - groups
       timeout.reconciliation: 180s
       timeout.hard.reconciliation: 0s
       statusbadge.enabled: false
@@ -43,6 +80,7 @@ argo-cd:
       policy.default: ""
       policy.csv: |
         g, admin, role:admin
+        g, argocd-admins, role:admin
 
     gpg:
       keys: {}
@@ -147,13 +185,6 @@ argo-cd:
       tls: true
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
-      extraHosts:
-        - name: argocd.local.gruzin.eu
-          path: /
-      extraTls:
-        - hosts:
-            - argocd.local.gruzin.eu
-          secretName: argocd-local-tls
 
     resources:
       limits:
@@ -217,13 +248,6 @@ argo-cd:
       tls: true
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
-      extraHosts:
-        - name: argocd.local.gruzin.eu
-          path: /api/webhook
-      extraTls:
-        - hosts:
-            - argocd.local.gruzin.eu
-          secretName: argocd-appset-local-tls
 
     resources:
       limits:

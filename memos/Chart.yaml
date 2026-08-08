@@ -1,0 +1,15 @@
+apiVersion: v2
+name: memos
+description: Keycloak client for Memos - the app itself comes from the upstream chart
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
+
+# No dependencies. Unlike immich/paperless/arr-stack, the upstream memos chart is
+# published only as a git repo (usememos/helm) with no Helm repository behind it, so
+# it cannot be a `dependencies:` entry. It stays a separate source on the Application
+# and this chart carries only what belongs to this repo - see
+# .argocd/memosApplication.yaml.

@@ -1,5 +1,4 @@
 host: sso.gruzin.eu
-localHost: sso.local.gruzin.eu
 realm: homelab
 
 # Where the operator runs. Only used to bind it the extra in-namespace permissions

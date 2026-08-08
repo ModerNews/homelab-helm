@@ -65,16 +65,12 @@ vault:
         cert-manager.io/cluster-issuer: letsencrypt
       hosts:
         - host: transit-vault.gruzin.eu
-        - host: transit-vault.local.gruzin.eu
         - host: vault.gruzin.eu
-        - host: vault.local.gruzin.eu
       tls:
         - secretName: transit-vault-tls
           hosts:
             - transit-vault.gruzin.eu
-            - transit-vault.local.gruzin.eu
             - vault.gruzin.eu
-            - vault.local.gruzin.eu
 
 # Name of the transit key the remote Vault's seal stanza will encrypt/decrypt
 # its master key with.

@@ -1,0 +1,49 @@
+{{- with .Values.oidc }}
+{{- if .enabled }}
+{{- /*
+Immich's Keycloak client, owned by the app that uses it.
+
+The credential is never generated here - it lives in Vault at `secret/oidc/immich`
+and VSO materialises it into this namespace. The Keycloak operator reads that Secret
+through auth.secretRef, and the render-config init container reads the same object,
+so the two sides of the integration cannot drift apart.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  type: kv-v2
+  mount: {{ .vault.mount | quote }}
+  path: {{ .vault.path | quote }}
+  refreshAfter: {{ .vault.refreshAfter | quote }}
+  destination:
+    name: {{ printf "oidc-%s" .clientId }}
+    create: true
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: {{ .clientId }}
+spec:
+  keycloakCRName: {{ .keycloakCRName | quote }}
+  realm: {{ .realm | quote }}
+  client:
+    # metadata.name above is the clientId - the CR has no separate field for it.
+    displayName: {{ .displayName | quote }}
+    enabled: true
+    loginFlows:
+      - STANDARD
+    redirectUris:
+      {{- range .redirectUris }}
+      - {{ . | quote }}
+      {{- end }}
+    auth:
+      method: client-secret
+      secretRef:
+        name: {{ printf "oidc-%s" .clientId }}
+        key: client_secret
+{{- end }}
+{{- end }}

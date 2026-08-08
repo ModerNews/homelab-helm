@@ -1,0 +1,56 @@
+{{- with .Values.oidc }}
+{{- if .enabled }}
+{{- /*
+Paperless' Keycloak client, owned by the app that uses it.
+
+The credential is never generated here - it lives in Vault at `secret/oidc/paperless`
+and VSO materialises it into this namespace, where both the Keycloak operator (via
+auth.secretRef) and Paperless itself read it.
+
+django-allauth wants its whole provider config as one JSON string with the secret
+embedded, so VSO renders that key from the same Vault value using a destination
+template. `client_secret` still passes through raw for the operator to read.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  type: kv-v2
+  mount: {{ .vault.mount | quote }}
+  path: {{ .vault.path | quote }}
+  refreshAfter: {{ .vault.refreshAfter | quote }}
+  destination:
+    name: {{ printf "oidc-%s" .clientId }}
+    create: true
+    transformation:
+      templates:
+        PAPERLESS_SOCIALACCOUNT_PROVIDERS:
+          text: {{ printf `{"openid_connect":{"SCOPE":["openid","profile","email"],"OAUTH_PKCE_ENABLED":true,"APPS":[{"provider_id":"keycloak","name":"Keycloak","client_id":"%s","secret":"{{ get .Secrets "client_secret" }}","settings":{"server_url":"%s/.well-known/openid-configuration"}}]}}` .clientId .issuerUrl | quote }}
+---
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: {{ .clientId }}
+spec:
+  keycloakCRName: {{ .keycloakCRName | quote }}
+  realm: {{ .realm | quote }}
+  client:
+    # metadata.name above is the clientId - the CR has no separate field for it.
+    displayName: {{ .displayName | quote }}
+    enabled: true
+    loginFlows:
+      - STANDARD
+    redirectUris:
+      {{- range .redirectUris }}
+      - {{ . | quote }}
+      {{- end }}
+    auth:
+      method: client-secret
+      secretRef:
+        name: {{ printf "oidc-%s" .clientId }}
+        key: client_secret
+{{- end }}
+{{- end }}
