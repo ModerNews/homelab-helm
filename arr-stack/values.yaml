@@ -9,6 +9,7 @@ jellyseerrOidc:
   # Credential source. VSO reads this KV entry and writes Secret/oidc-jellyseerr into
   # this namespace; the entry holds a single `client_secret` key.
   vault:
+    address: http://transit-vault.transit-vault.svc.cluster.local:8200
     mount: secret
     path: oidc/jellyseerr
     refreshAfter: 1h
