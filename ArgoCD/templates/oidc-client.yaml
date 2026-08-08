@@ -53,10 +53,63 @@ spec:
     labels:
       app.kubernetes.io/part-of: argocd
 ---
+{{- /*
+The operator resolves keycloakCRName in the *same namespace* as the client CR
+("The name of the Keycloak CR to reference, in the same namespace" - CRD schema),
+and there is no namespace field. So the client has to live where Keycloak lives,
+and because auth.secretRef is namespace-local the credential must be there too.
+
+Hence a second copy of the credential in the Keycloak namespace, read from the same
+Vault path as the one above - so the two cannot drift - carrying no destination
+template, since only the operator reads this one.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  namespace: {{ .keycloakNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  address: {{ .vault.address | quote }}
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  namespace: {{ .keycloakNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  vaultConnectionRef: {{ printf "oidc-%s" .clientId }}
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: vso
+    serviceAccount: default
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  namespace: {{ .keycloakNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  vaultAuthRef: {{ printf "oidc-%s" .clientId }}
+  type: kv-v2
+  mount: {{ .vault.mount | quote }}
+  path: {{ .vault.path | quote }}
+  refreshAfter: {{ .vault.refreshAfter | quote }}
+  destination:
+    name: {{ printf "oidc-%s" .clientId }}
+    create: true
+---
 apiVersion: k8s.keycloak.org/v2alpha1
 kind: KeycloakOIDCClient
 metadata:
   name: {{ .clientId }}
+  namespace: {{ .keycloakNamespace }}
 spec:
   keycloakCRName: {{ .keycloakCRName | quote }}
   realm: {{ .realm | quote }}

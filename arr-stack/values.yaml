@@ -5,6 +5,10 @@ jellyseerrOidc:
   clientId: jellyseerr
   displayName: Jellyseerr
   keycloakCRName: keycloak
+  # The KeycloakOIDCClient and its copy of the credential are rendered into this
+  # namespace, not the app's: the operator resolves keycloakCRName only within the
+  # client's own namespace. See templates/ for the full explanation.
+  keycloakNamespace: keycloak
   realm: homelab
   # Credential source. VSO reads this KV entry and writes Secret/oidc-jellyseerr into
   # this namespace; the entry holds a single `client_secret` key.
