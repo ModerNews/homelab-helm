@@ -12,12 +12,36 @@ embedded, so VSO renders that key from the same Vault value using a destination
 template. `client_secret` still passes through raw for the operator to read.
 */}}
 apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  address: {{ .vault.address | quote }}
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: {{ printf "oidc-%s" .clientId }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  vaultConnectionRef: {{ printf "oidc-%s" .clientId }}
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: vso
+    serviceAccount: default
+---
+apiVersion: secrets.hashicorp.com/v1beta1
 kind: VaultStaticSecret
 metadata:
   name: {{ printf "oidc-%s" .clientId }}
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
+  vaultAuthRef: {{ printf "oidc-%s" .clientId }}
   type: kv-v2
   mount: {{ .vault.mount | quote }}
   path: {{ .vault.path | quote }}

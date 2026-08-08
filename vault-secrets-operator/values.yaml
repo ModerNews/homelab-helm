@@ -1,6 +1,4 @@
-# VSO turns Vault KV entries into Kubernetes Secrets. A `VaultStaticSecret` creates
-# its Secret in its own namespace, and each app declares its own next to the
-# KeycloakOIDCClient that consumes it - e.g. immich/templates/oidc-client.yaml.
+# VSO turns Vault KV entries into Kubernetes Secrets.
 vault-secrets-operator:
   controller:
     replicas: 1
@@ -13,28 +11,24 @@ vault-secrets-operator:
         limits:
           memory: 256Mi
 
-  # A single VaultConnection named `default` in this namespace, used by every
-  # VaultStaticSecret that doesn't name its own.
-  # transit-vault is the cluster's only Vault - it serves both the transit engine for
-  # the remote instance and this cluster's own `secret/` KV mount.
+  # Both cluster-wide defaults are off - each app brings its own, so a shared object
+  # here would only ever be an unused fallback masking a chart that forgot to declare
+  # one. transit-vault is the cluster's only Vault; its address lives in each app's
+  # `oidc.vault.address`.
   defaultVaultConnection:
-    enabled: true
-    address: http://transit-vault.transit-vault.svc.cluster.local:8200
+    enabled: false
 
-  # Likewise a single VaultAuth. `allowedNamespaces: ["*"]` lets CRs in any namespace
-  # use it; what they can actually read is bounded by the Vault policy attached to
-  # the `vso` role, not by this list.
+  # defaultAuthMethod would also fail on its own terms: the chart renders
+  # `spec.namespace: {{ .Values.defaultAuthMethod.namespace }}` unquoted, and with no
+  # Vault Enterprise namespace to set - this is Vault OSS - that becomes an explicit
+  # null which the CRD rejects:
   #
-  # The role binds the `default` ServiceAccount of the consuming namespaces - see
-  # vault/README.md. On a single-tenant homelab that is a reasonable trade for not
-  # maintaining a ServiceAccount and Vault role per app; revisit it if the cluster
-  # ever hosts something untrusted.
+  #   VaultAuth.secrets.hashicorp.com "default" is invalid: spec.namespace:
+  #   Invalid value: "null": spec.namespace in body must be of type string
+  #
+  # Each app's own VaultAuth omits the field entirely, which is valid.
+  #
+  # They authenticate as their namespace's `default` ServiceAccount against the `vso`
+  # Vault role, whose bound namespaces come from terraform/oidc-clients.tf.
   defaultAuthMethod:
-    enabled: true
-    allowedNamespaces:
-      - "*"
-    method: kubernetes
-    mount: kubernetes
-    kubernetes:
-      role: vso
-      serviceAccount: default
+    enabled: false
