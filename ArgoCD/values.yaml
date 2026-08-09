@@ -62,6 +62,7 @@ argo-cd:
       # resolve such references.
       # The `groups` scope is declared in the realm import and made a default client
       # scope there, so the RBAC policy below can match Keycloak group names.
+      accounts.homepage: apiKey
       oidc.config: |
         name: Keycloak
         issuer: https://sso.gruzin.eu/realms/homelab
@@ -372,7 +373,8 @@ argo-cd:
 
       # The operator writes status, a content hash and the Keycloak-side UUID back
       # onto its own CRs, plus a finalizer to deregister the client on delete.
-      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakOIDCClient: |
+      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakOIDCClient:
+        |
         jqPathExpressions:
           - '.status'
           - '.metadata.finalizers'
@@ -382,7 +384,8 @@ argo-cd:
           - '.status'
           - '.metadata.finalizers'
 
-      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakRealmImport: |
+      resource.customizations.ignoreDifferences.k8s.keycloak.org_KeycloakRealmImport:
+        |
         jqPathExpressions:
           - '.status'
           - '.metadata.finalizers'
@@ -397,6 +400,8 @@ argo-cd:
       policy.csv: |
         g, admin, role:admin
         g, argocd-admins, role:admin
+        g, role:homepage, applications, get, */*, allow
+        g, homepage, role:homepage
 
     gpg:
       keys: {}
@@ -508,6 +513,10 @@ argo-cd:
         gethomepage.dev/description: GitOps
         gethomepage.dev/pod-selector: app.kubernetes.io/name=argocd-server
         gethomepage.dev/weight: "40"
+        gethomepage.dev/widget.type: argocd
+        gethomepage.dev/widget.url: http://argocd-server.argocd.svc.cluster.local
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_ARGOCD_KEY}}" }}'
+        gethomepage.dev/widget.fields: '["apps", "synced", "outOfSync", "healthy"]'
 
     resources:
       limits:
