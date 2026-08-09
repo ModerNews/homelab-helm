@@ -171,6 +171,7 @@ spec:
                   policy: sync
                   sources:
                     - ingress
+                    - traefik-proxy
                   txtOwnerId: homelab
                   resources:
                     requests:

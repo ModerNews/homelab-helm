@@ -103,3 +103,36 @@ jellyfin:
     - name: fonts
       mountPath: /usr/local/share/fonts/custom
       readOnly: true
+
+homepageSecrets:
+  enabled: true
+  namespace: homepage
+  vaultAuthRef: homepage
+  mount: secret
+  refreshAfter: 1h
+  apps:
+    - name: homepage-jellyfin
+      path: jellyfin/homepage
+      env:
+        HOMEPAGE_VAR_JELLYFIN_KEY: api_key
+    - name: homepage-sonarr
+      path: sonarr/homepage
+      env:
+        HOMEPAGE_VAR_SONARR_KEY: api_key
+    - name: homepage-radarr
+      path: radarr/homepage
+      env:
+        HOMEPAGE_VAR_RADARR_KEY: api_key
+    - name: homepage-prowlarr
+      path: prowlarr/homepage
+      env:
+        HOMEPAGE_VAR_PROWLARR_KEY: api_key
+    - name: homepage-jellyseerr
+      path: jellyseerr/homepage
+      env:
+        HOMEPAGE_VAR_JELLYSEERR_KEY: api_key
+    - name: homepage-qbittorrent
+      path: qbittorrent/homepage
+      env:
+        HOMEPAGE_VAR_QBITTORRENT_USERNAME: username
+        HOMEPAGE_VAR_QBITTORRENT_PASSWORD: password

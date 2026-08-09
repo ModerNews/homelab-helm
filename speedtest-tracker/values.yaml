@@ -40,3 +40,15 @@ homepage:
   icon: speedtest-tracker.png
   description: WAN throughput
   weight: 50
+
+homepageSecrets:
+  enabled: true
+  namespace: homepage
+  vaultAuthRef: homepage
+  mount: secret
+  refreshAfter: 1h
+  apps:
+    - name: homepage-speedtest-tracker
+      path: speedtest-tracker/homepage
+      env:
+        HOMEPAGE_VAR_SPEEDTEST_KEY: api_key

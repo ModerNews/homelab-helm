@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "homepage.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "homepage.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "homepage.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      automountServiceAccountToken: true
+      containers:
+        - name: homepage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: HOMEPAGE_ALLOWED_HOSTS
+              value: "$(MY_POD_IP):3000,{{ .Values.ingress.host }}"
+          {{- if .Values.vault.enabled }}
+          envFrom:
+            {{- range .Values.vault.envFrom }}
+            - secretRef:
+                name: {{ . }}
+                optional: true
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/healthcheck
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- range list "kubernetes.yaml" "settings.yaml" "widgets.yaml" "services.yaml" "bookmarks.yaml" "docker.yaml" "proxmox.yaml" "custom.css" "custom.js" }}
+            - name: config
+              mountPath: /app/config/{{ . }}
+              subPath: {{ . }}
+            {{- end }}
+            - name: logs
+              mountPath: /app/config/logs
+            {{- range $i, $p := .Values.hostPaths }}
+            - name: hostpath-{{ $i }}
+              mountPath: {{ $p }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}
+        - name: logs
+          emptyDir: {}
+        {{- range $i, $p := .Values.hostPaths }}
+        - name: hostpath-{{ $i }}
+          hostPath:
+            path: {{ $p }}
+        {{- end }}

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "homepage.labels" . | nindent 4 }}
+data:
+  kubernetes.yaml: |
+    {{- toYaml .Values.config.kubernetes | nindent 4 }}
+  settings.yaml: |
+    {{- .Values.config.settings | nindent 4 }}
+  widgets.yaml: |
+    {{- toYaml .Values.config.widgets | nindent 4 }}
+  services.yaml: |
+    {{- toYaml .Values.config.services | nindent 4 }}
+  bookmarks.yaml: |
+    {{- toYaml .Values.config.bookmarks | nindent 4 }}
+  docker.yaml: ""
+  proxmox.yaml: ""
+  custom.css: |
+    {{- .Values.config.custom.css | nindent 4 }}
+  custom.js: |
+    {{- .Values.config.custom.js | nindent 4 }}

@@ -18,6 +18,7 @@ metadata:
     gethomepage.dev/widget.type: speedtest
     gethomepage.dev/widget.url: "http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local"
     gethomepage.dev/widget.version: "2"
+    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_SPEEDTEST_KEY}}" | quote }}
     gethomepage.dev/widget.bitratePrecision: "1"
     gethomepage.dev/widget.fields: '["download", "upload", "ping"]'
     {{- end }}

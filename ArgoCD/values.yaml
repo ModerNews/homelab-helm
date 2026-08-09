@@ -657,3 +657,15 @@ argo-cd:
         name: homelab
         server: https://kubernetes.default.svc
         config: '{"tlsClientConfig":{"insecure":false}}'
+
+homepageSecrets:
+  enabled: true
+  namespace: homepage
+  vaultAuthRef: homepage
+  mount: secret
+  refreshAfter: 1h
+  apps:
+    - name: homepage-argocd
+      path: argocd/homepage
+      env:
+        HOMEPAGE_VAR_ARGOCD_KEY: token

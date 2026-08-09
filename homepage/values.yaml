@@ -1,0 +1,250 @@
+image:
+  repository: ghcr.io/gethomepage/homepage
+  tag: v1.13.2
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 384Mi
+
+hostPaths:
+  - /mnt/hdd
+
+ingress:
+  enabled: true
+  className: traefik
+  host: dash.gruzin.eu
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: true
+    secretName: homepage-tls
+
+rbac:
+  traefik: true
+  gateway: false
+
+vault:
+  enabled: true
+  address: http://transit-vault.transit-vault.svc.cluster.local:8200
+  mount: secret
+  refreshAfter: 1h
+  serviceAccount: default
+  role: vso
+  ownSecrets:
+    - name: homepage-openwrt
+      path: openwrt/homepage
+      env:
+        HOMEPAGE_VAR_OPENWRT_USERNAME: username
+        HOMEPAGE_VAR_OPENWRT_PASSWORD: password
+    - name: homepage-tailscale
+      path: tailscale/homepage
+      env:
+        HOMEPAGE_VAR_TAILSCALE_DEVICEID: deviceid
+        HOMEPAGE_VAR_TAILSCALE_KEY: api_key
+  envFrom:
+    - homepage-openwrt
+    - homepage-tailscale
+    - homepage-jellyfin
+    - homepage-sonarr
+    - homepage-radarr
+    - homepage-prowlarr
+    - homepage-jellyseerr
+    - homepage-qbittorrent
+    - homepage-immich
+    - homepage-paperless
+    - homepage-argocd
+    - homepage-home-assistant
+    - homepage-speedtest-tracker
+
+config:
+  kubernetes:
+    mode: cluster
+    traefik: false
+    gateway: false
+
+  settings: |
+    title: gruzin.eu
+    headerStyle: clean
+    layout:
+      System:
+        style: row
+        columns: 5
+      Daily:
+        style: row
+        columns: 5
+      Media management:
+        style: row
+        columns: 4
+
+  widgets:
+    - resources:
+        label: Resources
+        cpu: true
+        memory: true
+        disk:
+          - /mnt/hdd
+        cputemp: true
+        tempmin: 0
+        tempmax: 100
+        uptime: true
+        units: metric
+        refresh: 3000
+        diskUnits: bbytes
+        network: true
+        expanded: true
+    - search:
+        provider: duckduckgo
+        focus: true
+        showSearchSuggestions: true
+        target: _self
+    - glances:
+        url: http://glances.glances.svc.cluster.local:61208
+        version: 4
+        label: Overview
+        cpu: true
+        mem: true
+        cputemp: true
+        uptime: true
+        disk:
+          - /mnt/hdd
+        unit: metric
+        diskUnits: bbytes
+        expanded: true
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: Overview
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+    - openmeteo:
+        label: Weather
+        latitude: 52.229676
+        longitude: 21.012229
+        timezone: Europe/Warsaw
+        units: metric
+        cache: 5
+        format:
+          maximumFractionDigits: 1
+    - datetime:
+        text_size: xl
+        format:
+          dateStyle: short
+          timeStyle: short
+          hourCycle: h23
+
+  services:
+    - System:
+        - Router:
+            href: http://192.168.0.1
+            description: OpenWrt
+            icon: mdi-router-network
+            siteMonitor: http://192.168.0.1
+            weight: 10
+            widget:
+              type: openwrt
+              url: http://192.168.0.1
+              username: "{{HOMEPAGE_VAR_OPENWRT_USERNAME}}"
+              password: "{{HOMEPAGE_VAR_OPENWRT_PASSWORD}}"
+        - Switch:
+            href: http://192.168.0.137
+            description: LAN switch
+            icon: mdi-switch
+            siteMonitor: http://192.168.0.137
+            weight: 20
+        - NVR:
+            href: https://192.168.0.229
+            description: Reolink
+            icon: mdi-cctv
+            siteMonitor: https://192.168.0.229
+            weight: 25
+        - Tailscale:
+            href: https://login.tailscale.com/admin/machines
+            description: Tailnet gateway
+            icon: tailscale.png
+            weight: 30
+            widget:
+              type: tailscale
+              deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
+              key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
+              fields: ["address", "last_seen", "expires", "user", "hostname", "name", "client_version", "os", "created", "authorized", "is_external", "update_available", "tags"]
+        - Traefik:
+            href: https://traefik.gruzin.eu
+            description: Ingress
+            icon: traefik.png
+            weight: 50
+            widget:
+              type: traefik
+              url: https://traefik.gruzin.eu
+              fields: ["routers", "services", "middleware"]
+        - Keycloak:
+            href: https://sso.gruzin.eu
+            description: Identity
+            icon: keycloak.png
+            weight: 60
+            widget:
+              type: customapi
+              url: http://keycloak-service.keycloak.svc.cluster.local:9000/health/ready
+              refreshInterval: 30000
+              mappings:
+                - field: status
+                  label: Health
+                  format: text
+                  remap:
+                    - value: UP
+                      to: Up
+                    - any: true
+                      to: Down
+                - field: checks.1.status
+                  label: Cluster
+                  format: text
+                  remap:
+                    - value: UP
+                      to: Up
+                    - any: true
+                      to: Down
+        - Vault:
+            href: https://vault.gruzin.eu
+            description: Secrets
+            icon: vault.png
+            weight: 70
+            widget:
+              type: customapi
+              url: http://transit-vault.transit-vault.svc.cluster.local:8200/v1/sys/health
+              refreshInterval: 30000
+              mappings:
+                - field: sealed
+                  label: Sealed
+                  format: text
+                  remap:
+                    - value: false
+                      to: "No"
+                    - value: true
+                      to: "Yes"
+                - field: initialized
+                  label: Init
+                  format: text
+                  remap:
+                    - value: true
+                      to: "Yes"
+                    - any: true
+                      to: "No"
+                - field: version
+                  label: Version
+                  format: text
+
+  bookmarks: []
+
+  custom:
+    css: ""
+    js: ""

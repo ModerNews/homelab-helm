@@ -119,6 +119,17 @@ paperless-ngx:
       className: traefik
       annotations:
         cert-manager.io/cluster-issuer: letsencrypt
+        gethomepage.dev/enabled: "true"
+        gethomepage.dev/name: Paperless
+        gethomepage.dev/group: Daily
+        gethomepage.dev/icon: paperless-ngx.png
+        gethomepage.dev/description: Documents
+        gethomepage.dev/pod-selector: app.kubernetes.io/name=paperless-ngx
+        gethomepage.dev/weight: "60"
+        gethomepage.dev/widget.type: paperlessngx
+        gethomepage.dev/widget.url: http://paperless-paperless-ngx.paperless.svc.cluster.local:8000
+        gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_PAPERLESS_KEY}}"
+        gethomepage.dev/widget.fields: '["total", "inbox"]'
       hosts:
         - host: paperless.gruzin.eu
           paths:
@@ -129,3 +140,15 @@ paperless-ngx:
         - secretName: paperless-tls
           hosts:
             - paperless.gruzin.eu
+
+homepageSecrets:
+  enabled: true
+  namespace: homepage
+  vaultAuthRef: homepage
+  mount: secret
+  refreshAfter: 1h
+  apps:
+    - name: homepage-paperless
+      path: paperless/homepage
+      env:
+        HOMEPAGE_VAR_PAPERLESS_KEY: token
