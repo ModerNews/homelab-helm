@@ -38,6 +38,8 @@ spec:
       labels:
         io.kompose.service: jellyseerr
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
         - env:
             - name: LOG_LEVEL
@@ -46,8 +48,12 @@ spec:
               value: "5055"
             - name: TZ
               value: Europe/Warsaw
-          image: ghcr.io/fallenbagel/jellyseerr:latest
-          imagePullPolicy: Always
+          image: ghcr.io/seerr-team/seerr:v3.4.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
           livenessProbe:
             exec:
               command:

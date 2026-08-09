@@ -10,6 +10,11 @@ metadata:
     gethomepage.dev/description: TV series
     gethomepage.dev/pod-selector: io.kompose.service=sonarr
     gethomepage.dev/weight: "30"
+    gethomepage.dev/widget.type: sonarr
+    gethomepage.dev/widget.url: http://sonarr.arr-stack.svc.cluster.local:8989
+    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_SONARR_KEY}}" | quote }}
+    gethomepage.dev/widget.enableQueue: "true"
+    gethomepage.dev/widget.fields: '["wanted", "queued", "series"]'
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: sonarr.bay.gruzin.eu

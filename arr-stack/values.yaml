@@ -58,6 +58,17 @@ jellyfin:
       gethomepage.dev/description: Watch media
       gethomepage.dev/pod-selector: app.kubernetes.io/name=jellyfin
       gethomepage.dev/weight: "10"
+      gethomepage.dev/widget.type: jellyfin
+      gethomepage.dev/widget.url: http://arr-stack-jellyfin.arr-stack.svc.cluster.local:8096
+      gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_JELLYFIN_KEY}}"
+      gethomepage.dev/widget.version: "2"
+      gethomepage.dev/widget.enableBlocks: "true"
+      gethomepage.dev/widget.enableNowPlaying: "true"
+      gethomepage.dev/widget.enableUser: "true"
+      gethomepage.dev/widget.enableMediaControl: "true"
+      gethomepage.dev/widget.showEpisodeNumber: "true"
+      gethomepage.dev/widget.expandOneStreamToTwoRows: "true"
+      gethomepage.dev/widget.fields: '["movies", "series", "episodes", "songs"]'
     hosts:
       - host: jellyfin.gruzin.eu
         paths:

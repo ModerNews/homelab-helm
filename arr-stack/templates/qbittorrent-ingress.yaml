@@ -10,6 +10,13 @@ metadata:
     gethomepage.dev/description: Downloads
     gethomepage.dev/pod-selector: io.kompose.service=qbittorrent
     gethomepage.dev/weight: "10"
+    gethomepage.dev/widget.type: qbittorrent
+    gethomepage.dev/widget.url: http://qbittorrent.arr-stack.svc.cluster.local:8080
+    gethomepage.dev/widget.username: {{ "{{HOMEPAGE_VAR_QBITTORRENT_USERNAME}}" | quote }}
+    gethomepage.dev/widget.password: {{ "{{HOMEPAGE_VAR_QBITTORRENT_PASSWORD}}" | quote }}
+    gethomepage.dev/widget.enableLeechProgress: "true"
+    gethomepage.dev/widget.enableLeechSize: "true"
+    gethomepage.dev/widget.fields: '["leech", "download", "seed", "upload"]'
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: qbittorrent.gruzin.eu

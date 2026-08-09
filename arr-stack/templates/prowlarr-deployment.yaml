@@ -46,7 +46,7 @@ spec:
               value: "1000"
             - name: TZ
               value: Europe/Warsaw
-          image: lscr.io/linuxserver/prowlarr:latest
+          image: lscr.io/linuxserver/prowlarr:2.5.2.5491-ls156
           imagePullPolicy: Always
           name: prowlarr
           resources:

@@ -10,6 +10,11 @@ metadata:
     gethomepage.dev/description: Movies
     gethomepage.dev/pod-selector: io.kompose.service=radarr
     gethomepage.dev/weight: "40"
+    gethomepage.dev/widget.type: radarr
+    gethomepage.dev/widget.url: http://radarr.arr-stack.svc.cluster.local:7878
+    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_RADARR_KEY}}" | quote }}
+    gethomepage.dev/widget.enableQueue: "true"
+    gethomepage.dev/widget.fields: '["wanted", "missing", "queued", "movies"]'
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: radarr.bay.gruzin.eu
