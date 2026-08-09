@@ -1,0 +1,42 @@
+image:
+  repository: lscr.io/linuxserver/speedtest-tracker
+  tag: 1.14.7
+  pullPolicy: IfNotPresent
+
+timezone: Europe/Warsaw
+
+schedule: "0 */6 * * *"
+
+existingSecret: speedtest-tracker
+
+persistence:
+  enabled: true
+  size: 2Gi
+  storageClass: local-path
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 768Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: speedtest.gruzin.eu
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: true
+    secretName: speedtest-tracker-tls
+
+homepage:
+  enabled: true
+  name: Speedtest
+  group: Daily
+  icon: speedtest-tracker.png
+  description: WAN throughput
+  weight: 50

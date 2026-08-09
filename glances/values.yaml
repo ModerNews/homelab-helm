@@ -1,0 +1,17 @@
+image:
+  repository: nicolargo/glances
+  tag: 4.3.4-full
+  pullPolicy: IfNotPresent
+
+port: 61208
+
+hostPaths:
+  - /mnt/hdd
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

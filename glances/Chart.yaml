@@ -1,0 +1,10 @@
+apiVersion: v2
+name: glances
+description: Host metrics agent for the homepage glances info widget
+type: application
+version: 0.1.0
+appVersion: "4.3.4"
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

@@ -3,6 +3,13 @@ kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: Radarr
+    gethomepage.dev/group: Media management
+    gethomepage.dev/icon: radarr.png
+    gethomepage.dev/description: Movies
+    gethomepage.dev/pod-selector: io.kompose.service=radarr
+    gethomepage.dev/weight: "40"
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: radarr.bay.gruzin.eu

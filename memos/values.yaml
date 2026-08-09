@@ -34,6 +34,13 @@ ingress:
   className: traefik
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: Memos
+    gethomepage.dev/group: Daily
+    gethomepage.dev/icon: memos.png
+    gethomepage.dev/description: Notes
+    gethomepage.dev/pod-selector: app.kubernetes.io/name=memos
+    gethomepage.dev/weight: "40"
   hosts:
     - host: memos.gruzin.eu
       paths:

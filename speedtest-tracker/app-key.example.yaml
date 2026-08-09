@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: speedtest-tracker
+  namespace: speedtest-tracker
+type: Opaque
+stringData:
+  app-key: "base64:REPLACE_ME"

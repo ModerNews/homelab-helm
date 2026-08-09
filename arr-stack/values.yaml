@@ -51,6 +51,13 @@ jellyfin:
     className: traefik
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt
+      gethomepage.dev/enabled: "true"
+      gethomepage.dev/name: Jellyfin
+      gethomepage.dev/group: Daily
+      gethomepage.dev/icon: jellyfin.png
+      gethomepage.dev/description: Watch media
+      gethomepage.dev/pod-selector: app.kubernetes.io/name=jellyfin
+      gethomepage.dev/weight: "10"
     hosts:
       - host: jellyfin.gruzin.eu
         paths:

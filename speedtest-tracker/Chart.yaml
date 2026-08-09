@@ -1,0 +1,10 @@
+apiVersion: v2
+name: speedtest-tracker
+description: Scheduled internet speed tests, surfaced by the homepage speedtest widget
+type: application
+version: 0.1.0
+appVersion: "1.14.7"
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

@@ -3,6 +3,13 @@ kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: qBittorrent
+    gethomepage.dev/group: Media management
+    gethomepage.dev/icon: qbittorrent.png
+    gethomepage.dev/description: Downloads
+    gethomepage.dev/pod-selector: io.kompose.service=qbittorrent
+    gethomepage.dev/weight: "10"
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: qbittorrent.gruzin.eu

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "glances.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "glances.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "glances.selectorLabels" . | nindent 8 }}
+    spec:
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: glances
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: GLANCES_OPT
+              value: "-w"
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              hostPort: {{ .Values.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/4/status
+              port: {{ .Values.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: sys
+              mountPath: /sys
+              readOnly: true
+            {{- range $i, $p := .Values.hostPaths }}
+            - name: hostpath-{{ $i }}
+              mountPath: {{ $p }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: sys
+          hostPath:
+            path: /sys
+        {{- range $i, $p := .Values.hostPaths }}
+        - name: hostpath-{{ $i }}
+          hostPath:
+            path: {{ $p }}
+        {{- end }}

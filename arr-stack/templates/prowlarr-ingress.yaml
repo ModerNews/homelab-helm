@@ -3,6 +3,13 @@ kind: Ingress
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: Prowlarr
+    gethomepage.dev/group: Media management
+    gethomepage.dev/icon: prowlarr.png
+    gethomepage.dev/description: Indexers
+    gethomepage.dev/pod-selector: io.kompose.service=prowlarr
+    gethomepage.dev/weight: "20"
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: prowlarr.bay.gruzin.eu
