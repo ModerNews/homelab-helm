@@ -3,7 +3,7 @@ name: glances
 description: Host metrics agent for the homepage glances info widget
 type: application
 version: 0.1.0
-appVersion: "4.3.4"
+appVersion: "4.5.6"
 
 maintainers:
   - name: Grzegorz Jagielski
