@@ -400,7 +400,7 @@ argo-cd:
       policy.csv: |
         g, admin, role:admin
         g, argocd-admins, role:admin
-        g, role:homepage, applications, get, */*, allow
+        p, role:homepage, applications, get, */*, allow
         g, homepage, role:homepage
 
     gpg:
