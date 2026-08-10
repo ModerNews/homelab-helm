@@ -157,12 +157,12 @@ config:
     - System:
         - Keycloak:
             href: https://sso.gruzin.eu
-            description: Tożsamość
+            description: Logowanie
             icon: keycloak.png
             weight: 20
         - Vault:
             href: https://vault.gruzin.eu
-            description: Sekrety
+            description: Zarządzanie sekretami
             icon: vault.png
             weight: 30
             widget:
@@ -179,7 +179,7 @@ config:
                     - value: true
                       to: "Tak"
                 - field: initialized
-                  label: Inicjalizacja
+                  label: Gotowy
                   format: text
                   remap:
                     - value: true
@@ -206,7 +206,7 @@ config:
         - Uplink:
             - Tailscale:
                 href: https://login.tailscale.com/admin/machines
-                description: Brama Tailnet
+                description: Tailnet Gateway
                 icon: tailscale.png
                 weight: 30
                 widget:
@@ -233,9 +233,8 @@ config:
         - Photos: []
         - Notes: []
         - Home:
-            - NVR:
+            - Nagrywarka Kamer:
                 href: https://192.168.0.229
-                description: Reolink
                 icon: mdi-cctv
                 siteMonitor: https://192.168.0.229
                 weight: 70

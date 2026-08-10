@@ -10,7 +10,6 @@ metadata:
     gethomepage.dev/name: Home Assistant
     gethomepage.dev/group: Home
     gethomepage.dev/icon: home-assistant.png
-    gethomepage.dev/description: Automatyka domowa
     gethomepage.dev/weight: "5"
     gethomepage.dev/external: "true"
     gethomepage.dev/siteMonitor: http://{{ .Values.upstream.address }}:{{ .Values.upstream.port }}

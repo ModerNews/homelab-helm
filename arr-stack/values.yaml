@@ -55,7 +55,6 @@ jellyfin:
       gethomepage.dev/name: Jellyfin
       gethomepage.dev/group: Streaming
       gethomepage.dev/icon: jellyfin.png
-      gethomepage.dev/description: Oglądaj media
       gethomepage.dev/pod-selector: app.kubernetes.io/name=jellyfin
       gethomepage.dev/weight: "10"
       gethomepage.dev/widget.type: jellyfin
