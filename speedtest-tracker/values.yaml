@@ -36,7 +36,7 @@ ingress:
 homepage:
   enabled: true
   name: Speedtest
-  group: Networking
+  group: Uplink
   icon: speedtest-tracker.png
   description: WAN throughput
   weight: 40
