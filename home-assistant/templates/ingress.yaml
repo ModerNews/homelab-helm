@@ -13,10 +13,6 @@ metadata:
     gethomepage.dev/weight: "5"
     gethomepage.dev/external: "true"
     gethomepage.dev/siteMonitor: http://{{ .Values.upstream.address }}:{{ .Values.upstream.port }}
-    gethomepage.dev/widget.type: homeassistant
-    gethomepage.dev/widget.url: http://{{ .Values.upstream.address }}:{{ .Values.upstream.port }}
-    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_HOMEASSISTANT_KEY}}" | quote }}
-    gethomepage.dev/widget.fields: '["people_home", "lights_on", "switches_on"]'
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}

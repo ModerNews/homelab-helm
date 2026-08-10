@@ -12,14 +12,3 @@ ingress:
     enabled: true
     secretName: home-assistant-tls
 
-homepageSecrets:
-  enabled: true
-  namespace: homepage
-  vaultAuthRef: homepage
-  mount: secret
-  refreshAfter: 1h
-  apps:
-    - name: homepage-home-assistant
-      path: home-assistant/homepage
-      env:
-        HOMEPAGE_VAR_HOMEASSISTANT_KEY: token

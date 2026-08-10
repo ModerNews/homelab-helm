@@ -58,7 +58,6 @@ vault:
     - homepage-immich
     - homepage-paperless
     - homepage-argocd
-    - homepage-home-assistant
     - homepage-speedtest-tracker
 
 config:
