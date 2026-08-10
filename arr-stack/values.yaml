@@ -53,7 +53,7 @@ jellyfin:
       cert-manager.io/cluster-issuer: letsencrypt
       gethomepage.dev/enabled: "true"
       gethomepage.dev/name: Jellyfin
-      gethomepage.dev/group: Daily
+      gethomepage.dev/group: Streaming
       gethomepage.dev/icon: jellyfin.png
       gethomepage.dev/description: Watch media
       gethomepage.dev/pod-selector: app.kubernetes.io/name=jellyfin
@@ -62,13 +62,8 @@ jellyfin:
       gethomepage.dev/widget.url: http://arr-stack-jellyfin.arr-stack.svc.cluster.local:8096
       gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_JELLYFIN_KEY}}"
       gethomepage.dev/widget.version: "2"
-      gethomepage.dev/widget.enableBlocks: "true"
       gethomepage.dev/widget.enableNowPlaying: "true"
-      gethomepage.dev/widget.enableUser: "true"
-      gethomepage.dev/widget.enableMediaControl: "true"
-      gethomepage.dev/widget.showEpisodeNumber: "true"
-      gethomepage.dev/widget.expandOneStreamToTwoRows: "true"
-      gethomepage.dev/widget.fields: '["movies", "series", "episodes", "songs"]'
+      gethomepage.dev/widget.expandOneStreamToTwoRows: "false"
     hosts:
       - host: jellyfin.gruzin.eu
         paths:

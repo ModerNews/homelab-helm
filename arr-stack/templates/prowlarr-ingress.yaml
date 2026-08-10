@@ -5,11 +5,11 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: Prowlarr
-    gethomepage.dev/group: Media management
+    gethomepage.dev/group: Indexers
     gethomepage.dev/icon: prowlarr.png
     gethomepage.dev/description: Indexers
     gethomepage.dev/pod-selector: io.kompose.service=prowlarr
-    gethomepage.dev/weight: "20"
+    gethomepage.dev/weight: "10"
     gethomepage.dev/widget.type: prowlarr
     gethomepage.dev/widget.url: http://prowlarr.arr-stack.svc.cluster.local:9696
     gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_PROWLARR_KEY}}" | quote }}

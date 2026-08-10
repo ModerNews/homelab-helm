@@ -141,7 +141,7 @@ immich:
           cert-manager.io/cluster-issuer: letsencrypt
           gethomepage.dev/enabled: "true"
           gethomepage.dev/name: Immich
-          gethomepage.dev/group: Daily
+          gethomepage.dev/group: Photos
           gethomepage.dev/icon: immich.png
           gethomepage.dev/description: Photos
           gethomepage.dev/pod-selector: app.kubernetes.io/name=server,app.kubernetes.io/instance=immich
@@ -150,7 +150,7 @@ immich:
           gethomepage.dev/widget.url: http://immich-server.immich.svc.cluster.local:2283
           gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_IMMICH_KEY}}" }}'
           gethomepage.dev/widget.version: "2"
-          gethomepage.dev/widget.fields: '["users", "photos", "videos", "storage"]'
+          gethomepage.dev/widget.fields: '["photos", "videos", "storage"]'
         hosts:
           - host: immich.gruzin.eu
             paths:

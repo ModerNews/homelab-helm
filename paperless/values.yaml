@@ -121,15 +121,11 @@ paperless-ngx:
         cert-manager.io/cluster-issuer: letsencrypt
         gethomepage.dev/enabled: "true"
         gethomepage.dev/name: Paperless
-        gethomepage.dev/group: Daily
+        gethomepage.dev/group: Notes
         gethomepage.dev/icon: paperless-ngx.png
         gethomepage.dev/description: Documents
         gethomepage.dev/pod-selector: app.kubernetes.io/name=paperless-ngx
         gethomepage.dev/weight: "60"
-        gethomepage.dev/widget.type: paperlessngx
-        gethomepage.dev/widget.url: http://paperless-paperless-ngx.paperless.svc.cluster.local:8000
-        gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_PAPERLESS_KEY}}"
-        gethomepage.dev/widget.fields: '["total", "inbox"]'
       hosts:
         - host: paperless.gruzin.eu
           paths:

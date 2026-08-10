@@ -5,16 +5,11 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: Sonarr
-    gethomepage.dev/group: Media management
+    gethomepage.dev/group: Servarr
     gethomepage.dev/icon: sonarr.png
     gethomepage.dev/description: TV series
     gethomepage.dev/pod-selector: io.kompose.service=sonarr
-    gethomepage.dev/weight: "30"
-    gethomepage.dev/widget.type: sonarr
-    gethomepage.dev/widget.url: http://sonarr.arr-stack.svc.cluster.local:8989
-    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_SONARR_KEY}}" | quote }}
-    gethomepage.dev/widget.enableQueue: "true"
-    gethomepage.dev/widget.fields: '["wanted", "queued", "series"]'
+    gethomepage.dev/weight: "10"
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: sonarr.bay.gruzin.eu

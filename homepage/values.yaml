@@ -85,14 +85,43 @@ config:
         Devices:
           style: row
           columns: 2
+          header: false
+        Uplink:
+          style: row
+          columns: 1
+          header: false
       Calendar:
         style: column
       Daily:
-        style: row
-        columns: 5
+        style: column
+        Photos:
+          style: row
+          columns: 1
+          header: false
+        Notes:
+          style: row
+          columns: 2
+          header: false
+        Home:
+          style: row
+          columns: 2
+          header: false
+      Streaming:
+        style: column
       Media management:
-        style: row
-        columns: 4
+        style: column
+        Downloads:
+          style: row
+          columns: 1
+          header: false
+        Servarr:
+          style: row
+          columns: 2
+          header: false
+        Indexers:
+          style: row
+          columns: 2
+          header: false
       Health:
         style: row
         columns: 4
@@ -173,31 +202,17 @@ config:
                 icon: mdi-switch
                 siteMonitor: http://192.168.0.137
                 weight: 20
-        - Tailscale:
-            href: https://login.tailscale.com/admin/machines
-            description: Tailnet gateway
-            icon: tailscale.png
-            weight: 30
-            widget:
-              type: tailscale
-              deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
-              key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
-              fields:
-                [
-                  "address",
-                  "last_seen",
-                  "expires",
-                  "user",
-                  "hostname",
-                  "name",
-                  "client_version",
-                  "os",
-                  "created",
-                  "authorized",
-                  "is_external",
-                  "update_available",
-                  "tags",
-                ]
+        - Uplink:
+            - Tailscale:
+                href: https://login.tailscale.com/admin/machines
+                description: Tailnet gateway
+                icon: tailscale.png
+                weight: 30
+                widget:
+                  type: tailscale
+                  deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
+                  key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
+                  fields: ["address", "last_seen", "update_available"]
     - Calendar:
         - Calendar:
             icon: mdi-calendar-month
@@ -209,13 +224,20 @@ config:
               showTime: true
               firstDayInWeek: monday
               timezone: Europe/Warsaw
+    - Media management:
+        - Downloads: []
+        - Servarr: []
+        - Indexers: []
     - Daily:
-        - NVR:
-            href: https://192.168.0.229
-            description: Reolink
-            icon: mdi-cctv
-            siteMonitor: https://192.168.0.229
-            weight: 70
+        - Photos: []
+        - Notes: []
+        - Home:
+            - NVR:
+                href: https://192.168.0.229
+                description: Reolink
+                icon: mdi-cctv
+                siteMonitor: https://192.168.0.229
+                weight: 70
     - Health:
         - CPU:
             icon: mdi-cpu-64-bit
@@ -261,5 +283,8 @@ config:
   bookmarks: []
 
   custom:
-    css: ""
+    css: |
+      .subgroup + .subgroup {
+        margin-top: -0.5rem;
+      }
     js: ""

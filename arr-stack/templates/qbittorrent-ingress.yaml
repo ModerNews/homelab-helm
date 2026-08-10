@@ -5,7 +5,7 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: qBittorrent
-    gethomepage.dev/group: Media management
+    gethomepage.dev/group: Downloads
     gethomepage.dev/icon: qbittorrent.png
     gethomepage.dev/description: Downloads
     gethomepage.dev/pod-selector: io.kompose.service=qbittorrent

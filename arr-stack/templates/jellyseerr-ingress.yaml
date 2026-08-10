@@ -5,7 +5,7 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: Jellyseerr
-    gethomepage.dev/group: Daily
+    gethomepage.dev/group: Streaming
     gethomepage.dev/icon: jellyseerr.png
     gethomepage.dev/description: Request media
     gethomepage.dev/pod-selector: io.kompose.service=jellyseerr
@@ -13,7 +13,7 @@ metadata:
     gethomepage.dev/widget.type: seerr
     gethomepage.dev/widget.url: http://jellyseerr.arr-stack.svc.cluster.local:5055
     gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_JELLYSEERR_KEY}}" | quote }}
-    gethomepage.dev/widget.fields: '["pending", "approved", "available", "processing"]'
+    gethomepage.dev/widget.fields: '["pending", "available", "processing"]'
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: jellyseerr.gruzin.eu
