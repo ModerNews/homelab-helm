@@ -1,0 +1,135 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Warsaw",
+  "argocd": {
+    "fileMatch": ["(^|/)\\.argocd/.+\\.ya?ml$"]
+  },
+  "customManagers": [
+    {
+      // k0s itself, in the k0sctl spec
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["version:\\s+(?<currentValue>\\d+\\.\\d+\\.\\d+\\+k0s\\.\\d+)"],
+      "depNameTemplate": "k0sproject/k0s",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "regex:^v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\+k0s\\.(?<build>\\d+)$"
+    },
+    {
+      // Helm extensions declared inline in k0sctl.yaml. One manager per chart,
+      // because registryUrlTemplate cannot be derived from the repo alias.
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+metallb/metallb\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "metallb",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://metallb.github.io/metallb"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+jetstack/cert-manager\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "cert-manager",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://charts.jetstack.io"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+traefik/traefik\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "traefik",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://traefik.github.io/charts"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+local-path-provisioner/local-path-provisioner\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "local-path-provisioner",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://charts.containeroo.ch"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+tailscale/tailscale-operator\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "tailscale-operator",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://pkgs.tailscale.com/helmcharts"
+    },
+    {
+      // Appears twice (external-dns and external-dns-local) - both get bumped together
+      "customType": "regex",
+      "managerFilePatterns": ["/^k0sctl\\.yaml$/"],
+      "matchStrings": ["chartname:\\s+external-dns/external-dns\\s*\\n\\s*version:\\s+\"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "external-dns",
+      "datasourceTemplate": "helm",
+      "registryUrlTemplate": "https://kubernetes-sigs.github.io/external-dns"
+    },
+    {
+      // Bare `image:` refs inside Helm templates, which no built-in manager reads
+      "customType": "regex",
+      "managerFilePatterns": ["/^.+/templates/.+\\.ya?ml$/", "/^whoami\\.yaml$/"],
+      "matchStrings": ["image:\\s+[\"']?(?<depName>[^\\s\"':]+):(?<currentValue>[^\\s\"']+)[\"']?"],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["argocd"],
+      "rangeStrategy": "pin"
+    },
+    {
+      // LinuxServer.io tags look like 4.0.19.2979-ls321 - four-part upstream
+      // version plus a build suffix, which semver versioning cannot order.
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/**", "linuxserver/**"],
+      "versioning": "loose"
+    },
+    {
+      // Postgres and Keycloak major bumps need a migration, never do them silently
+      "matchDatasources": ["docker", "helm"],
+      "matchPackageNames": [
+        "ghcr.io/cloudnative-pg/postgresql",
+        "**/keycloak**"
+      ],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      // Node upgrades are a reboot of the only node in the cluster
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["k0sproject/k0s"],
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "addLabels": ["k0s", "node-reboot"]
+    },
+    {
+      // Cluster-level extensions land via k0sctl apply, not ArgoCD - group them
+      // into one PR so the file is only touched once per cycle.
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": [
+        "metallb",
+        "cert-manager",
+        "traefik",
+        "local-path-provisioner",
+        "tailscale-operator",
+        "external-dns"
+      ],
+      "groupName": "k0s cluster extensions",
+      "addLabels": ["k0sctl"],
+      "automerge": false
+    },
+    {
+      // Everything in the *arr stack moves together
+      "matchFileNames": ["arr-stack/**"],
+      "groupName": "arr-stack",
+      "addLabels": ["media"]
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "branch"
+    }
+  ]
+}
