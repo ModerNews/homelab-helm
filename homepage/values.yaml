@@ -34,7 +34,7 @@ vault:
   mount: secret
   refreshAfter: 1h
   serviceAccount: default
-  role: vso
+  role: homepage
   ownSecrets:
     - name: homepage-openwrt
       path: openwrt/homepage
@@ -69,155 +69,72 @@ config:
 
   settings: |
     title: gruzin.eu
-    headerStyle: clean
+    maxGroupColumns: 3
+    fullWidth: false
+    useEqualHeights: true
+    quicklaunch:
+      searchDescriptions: true
+      showSearchSuggestions: true
+      hideInternetSearch: false
+      hideVisitURL: false
     layout:
       System:
-        style: row
-        columns: 5
+        style: column
+      Networking:
+        style: column
+        Devices:
+          style: row
+          columns: 2
+      Calendar:
+        style: column
       Daily:
         style: row
         columns: 5
       Media management:
         style: row
         columns: 4
+      Health:
+        style: row
+        columns: 4
 
   widgets:
-    - resources:
-        label: Resources
-        cpu: true
-        memory: true
-        disk:
-          - /mnt/hdd
-        cputemp: true
-        tempmin: 0
-        tempmax: 100
-        uptime: true
-        units: metric
-        refresh: 3000
-        diskUnits: bbytes
-        network: true
-        expanded: true
     - search:
-        provider: duckduckgo
-        focus: true
+        provider:
+          - google
+          - duckduckgo
+          - brave
+          - bing
+        focus: false
         showSearchSuggestions: true
         target: _self
-    - glances:
-        url: http://glances.glances.svc.cluster.local:61208
-        version: 4
-        label: Overview
-        cpu: true
-        mem: true
-        cputemp: true
-        uptime: true
-        disk:
-          - /mnt/hdd
-        unit: metric
-        diskUnits: bbytes
-        expanded: true
-    - kubernetes:
-        cluster:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-          label: Overview
-        nodes:
-          show: true
-          cpu: true
-          memory: true
-          showLabel: true
-    - openmeteo:
-        label: Weather
-        latitude: 52.229676
-        longitude: 21.012229
-        timezone: Europe/Warsaw
-        units: metric
-        cache: 5
-        format:
-          maximumFractionDigits: 1
     - datetime:
         text_size: xl
         format:
           dateStyle: short
           timeStyle: short
           hourCycle: h23
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: Cluster
+        nodes:
+          show: false
 
   services:
     - System:
-        - Router:
-            href: http://192.168.0.1
-            description: OpenWrt
-            icon: mdi-router-network
-            siteMonitor: http://192.168.0.1
-            weight: 10
-            widget:
-              type: openwrt
-              url: http://192.168.0.1
-              username: "{{HOMEPAGE_VAR_OPENWRT_USERNAME}}"
-              password: "{{HOMEPAGE_VAR_OPENWRT_PASSWORD}}"
-        - Switch:
-            href: http://192.168.0.137
-            description: LAN switch
-            icon: mdi-switch
-            siteMonitor: http://192.168.0.137
-            weight: 20
-        - NVR:
-            href: https://192.168.0.229
-            description: Reolink
-            icon: mdi-cctv
-            siteMonitor: https://192.168.0.229
-            weight: 25
-        - Tailscale:
-            href: https://login.tailscale.com/admin/machines
-            description: Tailnet gateway
-            icon: tailscale.png
-            weight: 30
-            widget:
-              type: tailscale
-              deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
-              key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
-              fields: ["address", "last_seen", "expires", "user", "hostname", "name", "client_version", "os", "created", "authorized", "is_external", "update_available", "tags"]
-        - Traefik:
-            href: https://traefik.gruzin.eu
-            description: Ingress
-            icon: traefik.png
-            weight: 50
-            widget:
-              type: traefik
-              url: https://traefik.gruzin.eu
-              fields: ["routers", "services", "middleware"]
         - Keycloak:
             href: https://sso.gruzin.eu
             description: Identity
             icon: keycloak.png
-            weight: 60
-            widget:
-              type: customapi
-              url: http://keycloak-service.keycloak.svc.cluster.local:9000/health/ready
-              refreshInterval: 30000
-              mappings:
-                - field: status
-                  label: Health
-                  format: text
-                  remap:
-                    - value: UP
-                      to: Up
-                    - any: true
-                      to: Down
-                - field: checks.1.status
-                  label: Cluster
-                  format: text
-                  remap:
-                    - value: UP
-                      to: Up
-                    - any: true
-                      to: Down
+            weight: 20
         - Vault:
             href: https://vault.gruzin.eu
             description: Secrets
             icon: vault.png
-            weight: 70
+            weight: 30
             widget:
               type: customapi
               url: http://transit-vault.transit-vault.svc.cluster.local:8200/v1/sys/health
@@ -242,6 +159,104 @@ config:
                 - field: version
                   label: Version
                   format: text
+    - Networking:
+        - Devices:
+            - Router:
+                href: http://192.168.0.1
+                description: OpenWrt
+                icon: mdi-router-network
+                siteMonitor: http://192.168.0.1
+                weight: 10
+            - Switch:
+                href: http://192.168.0.137
+                description: LAN switch
+                icon: mdi-switch
+                siteMonitor: http://192.168.0.137
+                weight: 20
+        - Tailscale:
+            href: https://login.tailscale.com/admin/machines
+            description: Tailnet gateway
+            icon: tailscale.png
+            weight: 30
+            widget:
+              type: tailscale
+              deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
+              key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
+              fields:
+                [
+                  "address",
+                  "last_seen",
+                  "expires",
+                  "user",
+                  "hostname",
+                  "name",
+                  "client_version",
+                  "os",
+                  "created",
+                  "authorized",
+                  "is_external",
+                  "update_available",
+                  "tags",
+                ]
+    - Calendar:
+        - Calendar:
+            icon: mdi-calendar-month
+            weight: 10
+            widget:
+              type: calendar
+              view: monthly
+              maxEvents: 10
+              showTime: true
+              firstDayInWeek: monday
+              timezone: Europe/Warsaw
+    - Daily:
+        - NVR:
+            href: https://192.168.0.229
+            description: Reolink
+            icon: mdi-cctv
+            siteMonitor: https://192.168.0.229
+            weight: 70
+    - Health:
+        - CPU:
+            icon: mdi-cpu-64-bit
+            weight: 10
+            widget:
+              type: glances
+              url: http://glances.glances.svc.cluster.local:61208
+              version: 4
+              metric: cpu
+              refreshInterval: 5000
+              pointsLimit: 30
+        - Memory:
+            icon: mdi-memory
+            weight: 20
+            widget:
+              type: glances
+              url: http://glances.glances.svc.cluster.local:61208
+              version: 4
+              metric: memory
+              refreshInterval: 5000
+              pointsLimit: 30
+        - Storage:
+            icon: mdi-harddisk
+            weight: 40
+            widget:
+              type: glances
+              url: http://glances.glances.svc.cluster.local:61208
+              version: 4
+              metric: fs:/mnt/hdd/media
+              diskUnits: bbytes
+              refreshInterval: 30000
+        - Network:
+            icon: mdi-lan
+            weight: 50
+            widget:
+              type: glances
+              url: http://glances.glances.svc.cluster.local:61208
+              version: 4
+              metric: network:enp0s31f6
+              refreshInterval: 5000
+              pointsLimit: 30
 
   bookmarks: []
 

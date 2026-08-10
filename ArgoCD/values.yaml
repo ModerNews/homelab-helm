@@ -509,10 +509,10 @@ argo-cd:
         gethomepage.dev/enabled: "true"
         gethomepage.dev/name: ArgoCD
         gethomepage.dev/group: System
-        gethomepage.dev/icon: argocd.png
+        gethomepage.dev/icon: argo-cd.png
         gethomepage.dev/description: GitOps
         gethomepage.dev/pod-selector: app.kubernetes.io/name=argocd-server
-        gethomepage.dev/weight: "40"
+        gethomepage.dev/weight: "10"
         gethomepage.dev/widget.type: argocd
         gethomepage.dev/widget.url: http://argocd-server.argocd.svc.cluster.local
         gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_ARGOCD_KEY}}" }}'

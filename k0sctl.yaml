@@ -24,6 +24,10 @@ spec:
           src: manifests/traefik-tailscale-service.yaml
           dstDir: /var/lib/k0s/manifests/traefik/
           perm: 0644
+        - name: traefik-dashboard-cert
+          src: manifests/traefik-dashboard-cert.yaml
+          dstDir: /var/lib/k0s/manifests/traefik/
+          perm: 0644
   k0s:
     version: 1.35.1+k0s.0
     config:
@@ -119,8 +123,10 @@ spec:
                       matchRule: Host(`traefik.gruzin.eu`)
                       entryPoints:
                         - websecure
+                      tls:
+                        secretName: traefik-dashboard-tls
                   providers:
-                    kubernetesIngress:
+                    kubernetesCRD:
                       allowCrossNamespace: true
                     kubernetesGateway:
                       enabled: false

@@ -36,10 +36,10 @@ ingress:
 homepage:
   enabled: true
   name: Speedtest
-  group: Daily
+  group: Networking
   icon: speedtest-tracker.png
   description: WAN throughput
-  weight: 50
+  weight: 40
 
 homepageSecrets:
   enabled: true
