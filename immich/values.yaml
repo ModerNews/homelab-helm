@@ -143,7 +143,7 @@ immich:
           gethomepage.dev/name: Immich
           gethomepage.dev/group: Photos
           gethomepage.dev/icon: immich.png
-          gethomepage.dev/description: Photos
+          gethomepage.dev/description: Zdjęcia
           gethomepage.dev/pod-selector: app.kubernetes.io/name=server,app.kubernetes.io/instance=immich
           gethomepage.dev/weight: "30"
           gethomepage.dev/widget.type: immich

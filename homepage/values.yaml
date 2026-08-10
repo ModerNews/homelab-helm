@@ -69,6 +69,7 @@ config:
 
   settings: |
     title: gruzin.eu
+    language: pl
     maxGroupColumns: 3
     fullWidth: false
     useEqualHeights: true
@@ -80,7 +81,7 @@ config:
     layout:
       System:
         style: column
-      Networking:
+      Sieć:
         style: column
         Devices:
           style: row
@@ -90,9 +91,9 @@ config:
           style: row
           columns: 1
           header: false
-      Calendar:
+      Kalendarz:
         style: column
-      Daily:
+      Codzienne:
         style: column
         Photos:
           style: row
@@ -108,7 +109,7 @@ config:
           header: false
       Streaming:
         style: column
-      Media management:
+      Multimedia:
         style: column
         Downloads:
           style: row
@@ -122,7 +123,7 @@ config:
           style: row
           columns: 2
           header: false
-      Health:
+      Monitoring:
         style: row
         columns: 4
 
@@ -148,7 +149,7 @@ config:
           cpu: true
           memory: true
           showLabel: true
-          label: Cluster
+          label: Klaster
         nodes:
           show: false
 
@@ -156,12 +157,12 @@ config:
     - System:
         - Keycloak:
             href: https://sso.gruzin.eu
-            description: Identity
+            description: Tożsamość
             icon: keycloak.png
             weight: 20
         - Vault:
             href: https://vault.gruzin.eu
-            description: Secrets
+            description: Sekrety
             icon: vault.png
             weight: 30
             widget:
@@ -174,38 +175,38 @@ config:
                   format: text
                   remap:
                     - value: false
-                      to: "No"
+                      to: "Nie"
                     - value: true
-                      to: "Yes"
+                      to: "Tak"
                 - field: initialized
-                  label: Init
+                  label: Inicjalizacja
                   format: text
                   remap:
                     - value: true
-                      to: "Yes"
+                      to: "Tak"
                     - any: true
-                      to: "No"
+                      to: "Nie"
                 - field: version
-                  label: Version
+                  label: Wersja
                   format: text
-    - Networking:
+    - Sieć:
         - Devices:
             - Router:
                 href: http://192.168.0.1
-                description: OpenWrt
+                description: TP-Link Archer C6 v3
                 icon: mdi-router-network
                 siteMonitor: http://192.168.0.1
                 weight: 10
             - Switch:
                 href: http://192.168.0.137
-                description: LAN switch
+                description: TP-Link SG108E
                 icon: mdi-switch
                 siteMonitor: http://192.168.0.137
                 weight: 20
         - Uplink:
             - Tailscale:
                 href: https://login.tailscale.com/admin/machines
-                description: Tailnet gateway
+                description: Brama Tailnet
                 icon: tailscale.png
                 weight: 30
                 widget:
@@ -213,8 +214,8 @@ config:
                   deviceid: "{{HOMEPAGE_VAR_TAILSCALE_DEVICEID}}"
                   key: "{{HOMEPAGE_VAR_TAILSCALE_KEY}}"
                   fields: ["address", "last_seen", "update_available"]
-    - Calendar:
-        - Calendar:
+    - Kalendarz:
+        - Kalendarz:
             icon: mdi-calendar-month
             weight: 10
             widget:
@@ -224,11 +225,11 @@ config:
               showTime: true
               firstDayInWeek: monday
               timezone: Europe/Warsaw
-    - Media management:
+    - Multimedia:
         - Downloads: []
         - Servarr: []
         - Indexers: []
-    - Daily:
+    - Codzienne:
         - Photos: []
         - Notes: []
         - Home:
@@ -238,7 +239,7 @@ config:
                 icon: mdi-cctv
                 siteMonitor: https://192.168.0.229
                 weight: 70
-    - Health:
+    - Monitoring:
         - CPU:
             icon: mdi-cpu-64-bit
             weight: 10
@@ -249,7 +250,7 @@ config:
               metric: cpu
               refreshInterval: 5000
               pointsLimit: 30
-        - Memory:
+        - Pamięć:
             icon: mdi-memory
             weight: 20
             widget:
@@ -259,7 +260,7 @@ config:
               metric: memory
               refreshInterval: 5000
               pointsLimit: 30
-        - Storage:
+        - Dysk:
             icon: mdi-harddisk
             weight: 40
             widget:
@@ -269,7 +270,7 @@ config:
               metric: fs:/mnt/hdd/media
               diskUnits: bbytes
               refreshInterval: 30000
-        - Network:
+        - Transfer:
             icon: mdi-lan
             weight: 50
             widget:
@@ -286,5 +287,10 @@ config:
     css: |
       .subgroup + .subgroup {
         margin-top: -0.5rem;
+      }
+      @media (min-width: 1024px) {
+        #layout-groups > .services-group.md\:basis-1\/2 {
+          flex-basis: 33.3333%;
+        }
       }
     js: ""

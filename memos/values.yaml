@@ -38,7 +38,7 @@ ingress:
     gethomepage.dev/name: Memos
     gethomepage.dev/group: Notes
     gethomepage.dev/icon: memos.png
-    gethomepage.dev/description: Notes
+    gethomepage.dev/description: Notatki
     gethomepage.dev/pod-selector: app.kubernetes.io/name=memos
     gethomepage.dev/weight: "40"
   hosts:

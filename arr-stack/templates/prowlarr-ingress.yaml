@@ -7,13 +7,9 @@ metadata:
     gethomepage.dev/name: Prowlarr
     gethomepage.dev/group: Indexers
     gethomepage.dev/icon: prowlarr.png
-    gethomepage.dev/description: Indexers
+    gethomepage.dev/description: Indeksery
     gethomepage.dev/pod-selector: io.kompose.service=prowlarr
     gethomepage.dev/weight: "10"
-    gethomepage.dev/widget.type: prowlarr
-    gethomepage.dev/widget.url: http://prowlarr.arr-stack.svc.cluster.local:9696
-    gethomepage.dev/widget.key: {{ "{{HOMEPAGE_VAR_PROWLARR_KEY}}" | quote }}
-    gethomepage.dev/widget.fields: '["numberOfGrabs", "numberOfQueries", "numberOfFailGrabs", "numberOfFailQueries"]'
     kompose.cmd: kompose convert -f docker-compose.yml
     kompose.image-pull-policy: Always
     kompose.service.expose: prowlarr.bay.gruzin.eu

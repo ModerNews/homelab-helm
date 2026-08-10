@@ -38,7 +38,7 @@ homepage:
   name: Speedtest
   group: Uplink
   icon: speedtest-tracker.png
-  description: WAN throughput
+  description: Przepustowość WAN
   weight: 40
 
 homepageSecrets:

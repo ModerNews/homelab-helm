@@ -123,7 +123,7 @@ paperless-ngx:
         gethomepage.dev/name: Paperless
         gethomepage.dev/group: Notes
         gethomepage.dev/icon: paperless-ngx.png
-        gethomepage.dev/description: Documents
+        gethomepage.dev/description: Dokumenty
         gethomepage.dev/pod-selector: app.kubernetes.io/name=paperless-ngx
         gethomepage.dev/weight: "60"
       hosts:
