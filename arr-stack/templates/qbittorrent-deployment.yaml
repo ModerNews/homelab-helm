@@ -52,7 +52,7 @@ spec:
               value: Europe/Warsaw
             - name: WEBUI_PORT
               value: "8080"
-          image: lscr.io/linuxserver/qbittorrent:5.2.3_v2.0.13-ls470
+          image: lscr.io/linuxserver/qbittorrent:5.2.3
           imagePullPolicy: Always
           name: qbittorrent
           resources:
