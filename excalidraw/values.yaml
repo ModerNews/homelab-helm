@@ -1,0 +1,30 @@
+image:
+  repository: excalidraw/excalidraw
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: excalidraw.gruzin.eu
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: true
+    secretName: excalidraw-tls
+
+homepage:
+  enabled: true
+  name: Excalidraw
+  group: Notes
+  icon: excalidraw.png
+  description: Whiteboard
+  weight: 50

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: excalidraw
+description: Self-hosted Excalidraw whiteboard
+type: application
+version: 0.1.0
+appVersion: "latest"
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
