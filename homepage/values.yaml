@@ -88,7 +88,7 @@ config:
           header: false
         Uplink:
           style: row
-          columns: 1
+          columns: 2
           header: false
       Kalendarz:
         style: column
@@ -96,7 +96,7 @@ config:
         style: column
         Photos:
           style: row
-          columns: 1
+          columns: 2
           header: false
         Notes:
           style: row
@@ -112,7 +112,7 @@ config:
         style: column
         Downloads:
           style: row
-          columns: 1
+          columns: 2
           header: false
         Servarr:
           style: row
