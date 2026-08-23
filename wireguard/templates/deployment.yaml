@@ -16,6 +16,10 @@ spec:
       labels:
         {{- include "wireguard.selectorLabels" . | nindent 8 }}
     spec:
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ip_forward
+            value: "1"
       containers:
         - name: wireguard
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

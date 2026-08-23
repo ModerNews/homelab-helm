@@ -30,7 +30,6 @@ data:
       echo "ListenPort = ${WG_LISTEN_PORT}"
       echo "PrivateKey = ${PRIVATE_KEY}"
       echo "MTU = ${WG_MTU}"
-      echo "PostUp = sysctl -w net.ipv4.ip_forward=1"
       {{- range .Values.forward.ports }}
       echo "PostUp = iptables -t nat -A PREROUTING -i %i -p tcp --dport {{ .listen }} -j DNAT --to-destination ${TARGET_IP}:{{ .target }}"
       {{- end }}

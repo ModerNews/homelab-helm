@@ -44,6 +44,14 @@ spec:
           serviceCIDR: 10.96.0.0/12
         storage:
           type: kine
+        workerProfiles:
+          - name: default
+            values:
+              # Needed by wireguard/ (in-cluster WG forwarder pod): net.ipv4.ip_forward
+              # isn't on Kubernetes' default safe-sysctls list, so the pod's
+              # securityContext.sysctls request gets rejected without this.
+              allowedUnsafeSysctls:
+                - net.ipv4.ip_forward
         extensions:
           helm:
             repositories:
