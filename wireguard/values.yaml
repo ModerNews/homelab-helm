@@ -1,0 +1,47 @@
+image:
+  repository: linuxserver/wireguard
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 250m
+    memory: 64Mi
+
+wireguard:
+  address: 10.10.0.104/32
+  listenPort: 51820
+  mtu: 1420
+  # Same identity the host's `wmswg` NetworkManager connection used to hold.
+  # Migrated here rather than issued a fresh keypair since wmswg's only job
+  # on the host was forwarding into this cluster - there's nothing left for
+  # the host-side interface to do once this pod is up, so the old one gets
+  # torn down as part of the same cutover instead of running two peers.
+  #
+  # AllowedIPs is deliberately just the /24 the WG mesh itself uses, NOT the
+  # old host conf's 10.0.0.0/8 - that /8 would swallow this cluster's own
+  # podCIDR (10.244.0.0/16) and serviceCIDR (10.96.0.0/12), which are both
+  # inside 10.0.0.0/8, and hijack all pod-to-pod/Service traffic through the
+  # tunnel. Never widen this without checking k0sctl.yaml's CIDRs first.
+  peer:
+    publicKey: XzeoUsUBjuVDiKWoRO1mA8pUVMZfeHocU68RHjT7vEo=
+    endpoint: 156.17.229.201:51820
+    allowedIPs: 10.10.0.0/24
+    persistentKeepalive: 10
+  # Secret is NOT committed to git - see templates/secret.example.yaml for
+  # the shape and the README for the one-line command to create it for real.
+  secretName: wireguard-privatekey
+
+# Ports arriving on the tunnel that get DNAT'd to the target Service.
+# The Service is resolved by DNS at pod startup (not hardcoded to a
+# ClusterIP) so it keeps working if the Service is ever recreated.
+forward:
+  targetService: traefik.traefik.svc.cluster.local
+  ports:
+    - listen: 80
+      target: 80
+    - listen: 443
+      target: 443

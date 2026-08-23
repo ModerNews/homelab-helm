@@ -6,6 +6,7 @@ Chart.lock
 mail-secret.yaml
 argocd-secret.yaml
 vault-root-token.yaml
+app-key.yaml
 
 # Terraform. State is kept in-cluster via the kubernetes backend, so no tfstate
 # should appear here at all - these are belt-and-braces in case someone runs with

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: wireguard
+description: In-cluster WireGuard peer that forwards tunnel traffic to the traefik Service
+type: application
+version: 0.1.0
+appVersion: "latest"
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "wireguard.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "wireguard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wireguard.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: wireguard
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "/scripts/entrypoint.sh"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: ["NET_ADMIN"]
+              drop: ["ALL"]
+          env:
+            - name: FORWARD_TARGET_HOST
+              value: {{ .Values.forward.targetService | quote }}
+            - name: WG_ADDRESS
+              value: {{ .Values.wireguard.address | quote }}
+            - name: WG_LISTEN_PORT
+              value: {{ .Values.wireguard.listenPort | quote }}
+            - name: WG_MTU
+              value: {{ .Values.wireguard.mtu | quote }}
+            - name: WG_PEER_PUBLIC_KEY
+              value: {{ .Values.wireguard.peer.publicKey | quote }}
+            - name: WG_PEER_ALLOWED_IPS
+              value: {{ .Values.wireguard.peer.allowedIPs | quote }}
+            - name: WG_PEER_ENDPOINT
+              value: {{ .Values.wireguard.peer.endpoint | quote }}
+            - name: WG_PEER_KEEPALIVE
+              value: {{ .Values.wireguard.peer.persistentKeepalive | quote }}
+          volumeMounts:
+            - name: entrypoint
+              mountPath: /scripts
+              readOnly: true
+            - name: privatekey
+              mountPath: /secrets
+              readOnly: true
+            - name: wireguard-config
+              mountPath: /etc/wireguard
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: entrypoint
+          configMap:
+            name: {{ .Release.Name }}-entrypoint
+            defaultMode: 0o555
+        - name: privatekey
+          secret:
+            secretName: {{ .Values.wireguard.secretName }}
+        - name: wireguard-config
+          emptyDir: {}
