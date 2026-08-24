@@ -21,15 +21,10 @@ wireguard:
   # the host-side interface to do once this pod is up, so the old one gets
   # torn down as part of the same cutover instead of running two peers.
   #
-  # AllowedIPs is deliberately just the /24 the WG mesh itself uses, NOT the
-  # old host conf's 10.0.0.0/8 - that /8 would swallow this cluster's own
-  # podCIDR (10.244.0.0/16) and serviceCIDR (10.96.0.0/12), which are both
-  # inside 10.0.0.0/8, and hijack all pod-to-pod/Service traffic through the
-  # tunnel. Never widen this without checking k0sctl.yaml's CIDRs first.
   peer:
     publicKey: XzeoUsUBjuVDiKWoRO1mA8pUVMZfeHocU68RHjT7vEo=
     endpoint: 156.17.229.201:51820
-    allowedIPs: 10.10.0.0/24
+    allowedIPs: 10.0.0.0/10,10.64.0.0/11,10.112.0.0/12,10.128.0.0/10,10.192.0.0/11,10.224.0.0/12
     persistentKeepalive: 10
   # Secret is NOT committed to git - see templates/secret.example.yaml for
   # the shape and the README for the one-line command to create it for real.
