@@ -31,6 +31,16 @@ jellyfin:
     runAsUser: 1000
     runAsGroup: 1000
 
+  # Pod-level, so the container's uid 1000 carries the host's `render` group and
+  # can open /dev/dri/renderD128 for VAAPI. The node currently ships that node as
+  # 0666, which would work without this, but a driver or udev change tightening it
+  # back to the usual 0660 root:render would silently drop transcoding to software
+  # rather than fail loudly - so the membership is pinned instead of assumed.
+  # 105 is `render` on the Fedora node; it is not a well-known gid, re-check it
+  # with `getent group render` if the host is ever rebuilt.
+  podSecurityContext:
+    supplementalGroups: [105]
+
   resources:
     requests:
       cpu: 100m
@@ -86,6 +96,15 @@ jellyfin:
     - name: fonts
       hostPath:
         path: /mnt/hdd/media/configs/jellyfin/fonts
+    # Intel HD Graphics 530 (Skylake, 8086:1912) on the node. Single-node cluster,
+    # so a hostPath device is safe - there is nowhere else this pod can land. The
+    # jellyfin image already carries VAAPI/QSV ffmpeg and the iHD/i965 drivers, so
+    # the device is the only missing piece on the container side; the matching
+    # server-side switch is HardwareAccelerationType in encoding.xml, which lives
+    # in the config PV and is set through the Jellyfin UI.
+    - name: dri
+      hostPath:
+        path: /dev/dri
 
   volumeMounts:
     - name: tv
@@ -97,6 +116,8 @@ jellyfin:
     - name: fonts
       mountPath: /usr/local/share/fonts/custom
       readOnly: true
+    - name: dri
+      mountPath: /dev/dri
 
 homepageSecrets:
   enabled: true
