@@ -18,7 +18,7 @@ spec:
     # each app's own namespace, and the namespace-scoped variant only watches the
     # namespace it is installed into.
     repoURL: https://github.com/keycloak/keycloak-k8s-resources
-    targetRevision: "26.7.0"
+    targetRevision: "26.7.3"
     path: kubernetes/cluster-wide
   destination:
     server: https://kubernetes.default.svc
