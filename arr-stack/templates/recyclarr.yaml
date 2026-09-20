@@ -35,10 +35,7 @@ data:
       {{ $name }}:
         base_url: {{ $inst.base_url }}
         api_key: !env_var {{ $inst.api_key_env }}
-        include:
-          {{- range $inst.include }}
-          - template: {{ . }}
-          {{- end }}
+{{ toYaml (omit $inst "base_url" "api_key_env") | indent 8 }}
       {{- end }}
     {{- end }}
 # One resource per key: VaultStaticSecret reads a single KV path and each

@@ -324,6 +324,79 @@ bazarr:
         - path: /config
     data: *mediaVolume
 
+
+# Second Bazarr, dedicated to sonarr-anime. Bazarr connects to exactly ONE Sonarr
+# (its settings model `sonarr` as a single object, not a list), so covering both
+# sonarr and sonarr-anime needs two instances - there is no multi-instance mode.
+#
+# Split of responsibilities:
+#   bazarr        -> sonarr (series) + radarr (movies), OpenSubtitles
+#   bazarr-anime  -> sonarr-anime only, animesub.info (ANSI) + AniDB matching
+#
+# Providers are global PER INSTANCE (`general.enabled_providers`), which is the
+# real reason this split works: ANSI belongs only on the anime side.
+bazarr-anime:
+  global:
+    # Both overrides are required. fullnameOverride alone names the resources but
+    # leaves app.kubernetes.io/name defaulting to the parent chart, so every
+    # app-template instance renders an IDENTICAL selector and the Deployments
+    # fight over each other's pods. See the sibling entries.
+    fullnameOverride: bazarr-anime
+    nameOverride: bazarr-anime
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/bazarr
+            tag: "v1.6.1-ls364"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 6767
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Bazarr (Anime)
+        gethomepage.dev/icon: bazarr.png
+        gethomepage.dev/description: Napisy anime
+        gethomepage.dev/weight: "45"
+        gethomepage.dev/widget.type: bazarr
+        gethomepage.dev/widget.url: http://bazarr-anime.arr-stack.svc.cluster.local:6767
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_BAZARR_ANIME_KEY}}" }}'
+        kuma.bazarr-anime.http.name: Bazarr Anime
+        kuma.bazarr-anime.http.url: https://bazarr-anime.bay.gruzin.eu
+        kuma.bazarr-anime.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &bazarrAnimeHost bazarr-anime.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: bazarr-anime-tls
+          hosts:
+            - *bazarrAnimeHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/bazarr-anime/config
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
 qbittorrent:
   global:
     fullnameOverride: qbittorrent
@@ -522,31 +595,69 @@ recyclarr:
       SONARR_MAIN_API_KEY: sonarr/api-key
       SONARR_ANIME_API_KEY: sonarr-anime/api-key
       RADARR_MAIN_API_KEY: radarr/api-key
-  # Verify template names against `recyclarr list templates` for the pinned image.
+  # Bodies below are the TRaSH Guides root templates, inlined. Recyclarr's
+  # `include:` mechanism is NOT used: as of 8.x the official config-templates
+  # provider ships zero includes (`config list templates --includes` returns 0),
+  # so the old v5-era include names (sonarr-v4-custom-formats-web-1080p and
+  # friends) resolve against nothing and abort the whole sync. Regenerate a body
+  # with `recyclarr config create -t <template>` and paste it here.
+  #
+  #   sonarr.main  <- web-1080p                 radarr.main <- hd-bluray-web
+  #   sonarr.anime <- sonarr-anime-remux-1080p
   config:
     sonarr:
-      main:
+      series:
         base_url: http://sonarr.arr-stack.svc.cluster.local:8989
         api_key_env: SONARR_MAIN_API_KEY
-        include:
-          - sonarr-quality-definition-series
-          - sonarr-v4-quality-profile-web-1080p
-          - sonarr-v4-custom-formats-web-1080p
+        quality_definition:
+          type: series
+        quality_profiles:
+          - trash_id: 72dae194fc92bf828f32cde7744e51a1   # WEB-1080p
+            reset_unmatched_scores:
+              enabled: true
+        custom_format_groups:
+          add:
+            - trash_id: 158188097a58d7687dee647e04af0da3  # [Optional] Golden Rule HD
+            - trash_id: 74aff4168620ed49dcc67e92b2c2a5b4  # [Optional] Language Profiles
+            - trash_id: 85fae4a2294965b75710ef2989c850eb  # [Streaming Services] HD/UHD boost
+            - trash_id: 59c3af66780d08332fdc64e68297098f  # [Unwanted] Unwanted Formats
+
+      # The guide's anime profile is Remux-first (~10-15GB/episode). The array is
+      # at 78% with ~500G free, so the cutoff is pulled down to WEB 1080p - one
+      # season of remux would eat most of the remaining headroom. The anime custom
+      # formats and `quality_definition: anime` are kept; only the ceiling moves.
+      # No custom_format_groups: the upstream template ships an empty `add:` and
+      # relies on the required CFs, which recyclarr syncs automatically.
       anime:
         base_url: http://sonarr-anime.arr-stack.svc.cluster.local:8989
         api_key_env: SONARR_ANIME_API_KEY
-        include:
-          - sonarr-quality-definition-anime
-          - sonarr-v4-quality-profile-anime
-          - sonarr-v4-custom-formats-anime
+        quality_definition:
+          type: anime
+        quality_profiles:
+          - trash_id: 20e0fc959f1f1704bed501f23bdae76f   # [Anime] Remux-1080p
+            upgrade:
+              allowed: true
+              until_quality: WEB 1080p
+              until_score: 10000
+            reset_unmatched_scores:
+              enabled: true
+
     radarr:
-      main:
+      # `quality_definition` is instance-global: it rewrites size limits for every
+      # profile on this Radarr, not just the one below.
+      movies:
         base_url: http://radarr.arr-stack.svc.cluster.local:7878
         api_key_env: RADARR_MAIN_API_KEY
-        include:
-          - radarr-quality-definition-movie
-          - radarr-v5-quality-profile-hd-bluray-web
-          - radarr-v5-custom-formats-hd-bluray-web
+        quality_definition:
+          type: movie
+        quality_profiles:
+          - trash_id: d1d67249d3890e49bc12e275d989a7e9   # HD Bluray + WEB
+            reset_unmatched_scores:
+              enabled: true
+        custom_format_groups:
+          add:
+            - trash_id: f8bf8eab4617f12dfdbd16303d8da245  # [Optional] Golden Rule HD
+            - trash_id: a3ac6af01d78e4f21fcb75f601ac96df  # [Unwanted] Unwanted Formats
 
 jellyseerrOidc:
   enabled: true
@@ -700,6 +811,10 @@ homepageSecrets:
       path: bazarr/api-key
       env:
         HOMEPAGE_VAR_BAZARR_KEY: api_key
+    - name: homepage-bazarr-anime
+      path: bazarr-anime/api-key
+      env:
+        HOMEPAGE_VAR_BAZARR_ANIME_KEY: api_key
     - name: homepage-prowlarr
       path: prowlarr/homepage
       env:

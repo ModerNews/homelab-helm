@@ -40,6 +40,11 @@ dependencies:
     repository: "https://bjw-s-labs.github.io/helm-charts/"
 
   - name: app-template
+    alias: bazarr-anime
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
     alias: qbittorrent
     version: "5.2.1"
     repository: "https://bjw-s-labs.github.io/helm-charts/"
