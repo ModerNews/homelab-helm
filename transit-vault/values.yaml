@@ -92,7 +92,7 @@ initJob:
   unsealTokenSecretName: transit-vault-unseal-token
   image:
     repository: hashicorp/vault
-    tag: "1.21.2"
+    tag: "1.21.4"
   # Periodic token TTL - the remote Vault's transit seal client renews it
   # automatically as long as it stays in continuous use.
   tokenPeriod: 768h
