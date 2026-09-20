@@ -36,6 +36,15 @@ spec:
       metadata:
         name: homelab
       spec:
+        # Pinned deliberately. Left unset, k0s auto-detects the API address at
+        # startup and advertises whichever interface wins the boot race. A
+        # transient USB NIC (enp0s20f0u9) once leased 10.253.227.100 two seconds
+        # before enp0s31f6 came up, so k0s advertised that address and baked it
+        # into the default/kubernetes Endpoints. Once the NIC went away that
+        # address was unroutable and every pod lost the API via 10.96.0.1,
+        # which silently froze ArgoCD reconciliation cluster-wide.
+        api:
+          address: 192.168.0.253
         telemetry:
           enabled: false
         network:
