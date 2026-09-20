@@ -55,6 +55,10 @@ jellyfin:
       existingClaim: jellyfin-config
     media:
       enabled: false
+    cache:
+      enabled: true
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/jellyfin/cache
 
   ingress:
     enabled: true
@@ -90,9 +94,6 @@ jellyfin:
     - name: movies
       hostPath:
         path: /mnt/hdd/media/contents/movies
-    - name: cache
-      hostPath:
-        path: /mnt/hdd/media/configs/jellyfin/cache
     - name: fonts
       hostPath:
         path: /mnt/hdd/media/configs/jellyfin/fonts
@@ -111,8 +112,6 @@ jellyfin:
       mountPath: /tv
     - name: movies
       mountPath: /movies
-    - name: cache
-      mountPath: /cache
     - name: fonts
       mountPath: /usr/local/share/fonts/custom
       readOnly: true
