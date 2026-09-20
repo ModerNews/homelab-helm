@@ -29,6 +29,7 @@ arrDefaults:
 sonarr:
   global:
     fullnameOverride: sonarr
+    nameOverride: sonarr
   controllers:
     main:
       type: deployment
@@ -91,6 +92,7 @@ sonarr:
 sonarr-anime:
   global:
     fullnameOverride: sonarr-anime
+    nameOverride: sonarr-anime
   controllers:
     main:
       type: deployment
@@ -149,6 +151,7 @@ sonarr-anime:
 radarr:
   global:
     fullnameOverride: radarr
+    nameOverride: radarr
   controllers:
     main:
       type: deployment
@@ -207,6 +210,7 @@ radarr:
 prowlarr:
   global:
     fullnameOverride: prowlarr
+    nameOverride: prowlarr
   controllers:
     main:
       type: deployment
@@ -264,6 +268,7 @@ prowlarr:
 bazarr:
   global:
     fullnameOverride: bazarr
+    nameOverride: bazarr
   controllers:
     main:
       type: deployment
@@ -322,6 +327,7 @@ bazarr:
 qbittorrent:
   global:
     fullnameOverride: qbittorrent
+    nameOverride: qbittorrent
   controllers:
     main:
       type: deployment
@@ -419,6 +425,7 @@ qbittorrent:
 jellyseerr:
   global:
     fullnameOverride: jellyseerr
+    nameOverride: jellyseerr
   controllers:
     main:
       type: deployment

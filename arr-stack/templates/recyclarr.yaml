@@ -1,10 +1,32 @@
 {{- with .Values.recyclarr }}
 {{- if .enabled }}
+{{- /*
+Sync-wave ordering for this chart, and why it is not the obvious one.
+
+  -3 / -2   VaultConnection, VaultAuth   (vault-auth.yaml)
+   0        the *arr apps themselves     (app-template subcharts, default wave)
+   1        recyclarr's API-key secrets  (below)
+   2        recyclarr ConfigMap + CronJob
+   3        homepage's secrets           (homepage-secrets.yaml)
+
+Secrets deliberately come AFTER the apps, not before. Every key here is minted
+BY an *arr instance on first run - so gating the apps on secrets that only exist
+once the apps have started is circular, and it deadlocks a fresh install: the
+app cannot boot because the secret is missing, and the secret cannot exist until
+the app boots. Putting the apps at wave 0 breaks the cycle - they come up, mint
+their keys, and the later waves pick them up.
+
+Nothing in wave 0 consumes any of these Secrets; only recyclarr (wave 2) and
+homepage (a separate chart, wave 3) do. Do not move secrets back ahead of the
+apps.
+*/}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: recyclarr-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 data:
   recyclarr.yml: |
     {{- range $app, $instances := .config }}
@@ -28,7 +50,7 @@ kind: VaultStaticSecret
 metadata:
   name: recyclarr-{{ $env | lower | replace "_" "-" }}
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   vaultAuthRef: {{ $.Values.vault.name }}
   type: kv-v2
@@ -49,6 +71,8 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: recyclarr
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   schedule: {{ .schedule | quote }}
   timeZone: Europe/Warsaw
