@@ -489,14 +489,15 @@ jellyseerr:
 # namespaced, so without this pair existing in arr-stack the secrets fail with
 # `VaultAuth "arr-stack" not found` and the sync-wave -1 gate blocks the release.
 #
-# `role` is the Vault Kubernetes auth role. vso is the role this namespace
-# already authenticates as (see jellyseerrOidc), so its policy must also grant
-# read on the secret/*/recyclarr paths listed below.
+# `role` is a dedicated Vault Kubernetes auth role bound to arr-stack/default and
+# carrying the recyclarr-read policy. It is deliberately NOT `vso`: despite the
+# name, vso is the OIDC reader, bound across six namespaces, and its policy grants
+# only oidc/* and keycloak/admin - it cannot read these paths.
 vault:
   enabled: true
   name: arr-stack
   address: http://transit-vault.transit-vault.svc.cluster.local:8200
-  role: vso
+  role: recyclarr
   serviceAccount: default
 
 # Converge-and-exit tool, so it runs as a CronJob. Keys come from Vault and are
@@ -511,9 +512,9 @@ recyclarr:
     mount: secret
     refreshAfter: 1h
     keys:
-      SONARR_MAIN_API_KEY: sonarr/recyclarr
-      SONARR_ANIME_API_KEY: sonarr-anime/recyclarr
-      RADARR_MAIN_API_KEY: radarr/recyclarr
+      SONARR_MAIN_API_KEY: sonarr/api-key
+      SONARR_ANIME_API_KEY: sonarr-anime/api-key
+      RADARR_MAIN_API_KEY: radarr/api-key
   # Verify template names against `recyclarr list templates` for the pinned image.
   config:
     sonarr:
@@ -653,6 +654,18 @@ jellyfin:
     - name: dri
       mountPath: /dev/dri
 
+# Two path conventions coexist here on purpose, mid-migration.
+#
+#   <app>/api-key    owner-scoped: the leaf names the secret, so one path can have
+#                    several readers. sonarr/sonarr-anime/radarr are read by BOTH
+#                    homepage and recyclarr - storing the key twice would mean a
+#                    rotation has to land in two places or silently half-break.
+#   <app>/homepage   the original consumer-scoped layout, still used by the apps
+#                    that have exactly one reader and so no reason to move yet.
+#
+# Vault's homepage-read policy globs both (`secret/data/+/homepage` and
+# `secret/data/+/api-key`), so the mix is safe. Move an app to api-key whenever a
+# second consumer appears; migrate the rest when convenient.
 homepageSecrets:
   enabled: true
   namespace: homepage
@@ -665,19 +678,19 @@ homepageSecrets:
       env:
         HOMEPAGE_VAR_JELLYFIN_KEY: api_key
     - name: homepage-sonarr
-      path: sonarr/homepage
+      path: sonarr/api-key
       env:
         HOMEPAGE_VAR_SONARR_KEY: api_key
     - name: homepage-sonarr-anime
-      path: sonarr-anime/homepage
+      path: sonarr-anime/api-key
       env:
         HOMEPAGE_VAR_SONARR_ANIME_KEY: api_key
     - name: homepage-radarr
-      path: radarr/homepage
+      path: radarr/api-key
       env:
         HOMEPAGE_VAR_RADARR_KEY: api_key
     - name: homepage-bazarr
-      path: bazarr/homepage
+      path: bazarr/api-key
       env:
         HOMEPAGE_VAR_BAZARR_KEY: api_key
     - name: homepage-prowlarr
