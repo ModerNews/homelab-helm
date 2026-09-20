@@ -1,13 +1,538 @@
-# Keycloak client for Jellyseerr, rendered by templates/jellyseerr-oidc-client.yaml.
-# Jellyseerr is not wired up to it yet - see the comment in that template.
+# YAML anchors only - resolved at parse time, not read by any subchart.
+arrDefaults:
+  env: &arrEnv
+    PUID: "1000"
+    PGID: "1000"
+    TZ: Europe/Warsaw
+
+  resources: &arrResources
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Single mount so downloads and library share a filesystem: imports become
+  # atomic renames plus hardlinks instead of copies. Do not re-split per library.
+  media: &mediaVolume
+    type: hostPath
+    hostPath: /mnt/hdd/media
+    globalMounts:
+      - path: /data
+
+  ingressAnnotations: &arrIngressAnnotations
+    cert-manager.io/cluster-issuer: letsencrypt
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/group: Servarr
+
+sonarr:
+  global:
+    fullnameOverride: sonarr
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            # v2.0.0 -> v4 in one step. Back up nzbdrone.db first; if v4 refuses the
+            # schema, stage through 3.0.10.1567-ls218 and retry.
+            repository: lscr.io/linuxserver/sonarr
+            tag: "4.0.20.3014-ls325"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 8989
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Sonarr
+        gethomepage.dev/icon: sonarr.png
+        gethomepage.dev/description: Seriale
+        gethomepage.dev/weight: "10"
+        gethomepage.dev/widget.type: sonarr
+        gethomepage.dev/widget.url: http://sonarr.arr-stack.svc.cluster.local:8989
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_SONARR_KEY}}" }}'
+        kuma.sonarr.http.name: Sonarr TV
+        kuma.sonarr.http.url: https://sonarr.bay.gruzin.eu
+        kuma.sonarr.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &sonarrHost sonarr.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: sonarr-tls
+          hosts:
+            - *sonarrHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/sonarr/data
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
+
+# Separate instance, not a profile: Series Type, naming format and root folder
+# are instance-wide settings in Sonarr.
+sonarr-anime:
+  global:
+    fullnameOverride: sonarr-anime
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/sonarr
+            tag: "4.0.20.3014-ls325"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 8989
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Sonarr (Anime)
+        gethomepage.dev/icon: sonarr.png
+        gethomepage.dev/description: Anime
+        gethomepage.dev/weight: "15"
+        gethomepage.dev/widget.type: sonarr
+        gethomepage.dev/widget.url: http://sonarr-anime.arr-stack.svc.cluster.local:8989
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_SONARR_ANIME_KEY}}" }}'
+        kuma.sonarr-anime.http.name: Sonarr Anime
+        kuma.sonarr-anime.http.url: https://sonarr-anime.bay.gruzin.eu
+        kuma.sonarr-anime.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &sonarrAnimeHost sonarr-anime.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: sonarr-anime-tls
+          hosts:
+            - *sonarrAnimeHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/sonarr-anime/data
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
+
+radarr:
+  global:
+    fullnameOverride: radarr
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/radarr
+            tag: "nightly-6.4.4.10698-ls20"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 7878
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Radarr
+        gethomepage.dev/icon: radarr.png
+        gethomepage.dev/description: Filmy
+        gethomepage.dev/weight: "20"
+        gethomepage.dev/widget.type: radarr
+        gethomepage.dev/widget.url: http://radarr.arr-stack.svc.cluster.local:7878
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_RADARR_KEY}}" }}'
+        kuma.radarr.http.name: Radarr Movies
+        kuma.radarr.http.url: https://radarr.bay.gruzin.eu
+        kuma.radarr.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &radarrHost radarr.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: radarr-tls
+          hosts:
+            - *radarrHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/radarr/config
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
+
+prowlarr:
+  global:
+    fullnameOverride: prowlarr
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/prowlarr
+            tag: "nightly-2.6.5.5620-ls16"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 9696
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Prowlarr
+        gethomepage.dev/icon: prowlarr.png
+        gethomepage.dev/description: Indeksery
+        gethomepage.dev/weight: "30"
+        gethomepage.dev/widget.type: prowlarr
+        gethomepage.dev/widget.url: http://prowlarr.arr-stack.svc.cluster.local:9696
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_PROWLARR_KEY}}" }}'
+        kuma.prowlarr.http.name: Prowlarr
+        kuma.prowlarr.http.url: https://prowlarr.bay.gruzin.eu
+        kuma.prowlarr.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &prowlarrHost prowlarr.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: prowlarr-tls
+          hosts:
+            - *prowlarrHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/prowlarr/config
+      globalMounts:
+        - path: /config
+
+bazarr:
+  global:
+    fullnameOverride: bazarr
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/bazarr
+            tag: "v1.6.1-ls364"
+            pullPolicy: Always
+          env: *arrEnv
+          resources: *arrResources
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 6767
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        <<: *arrIngressAnnotations
+        gethomepage.dev/name: Bazarr
+        gethomepage.dev/icon: bazarr.png
+        gethomepage.dev/description: Napisy
+        gethomepage.dev/weight: "40"
+        gethomepage.dev/widget.type: bazarr
+        gethomepage.dev/widget.url: http://bazarr.arr-stack.svc.cluster.local:6767
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_BAZARR_KEY}}" }}'
+        kuma.bazarr.http.name: Bazarr
+        kuma.bazarr.http.url: https://bazarr.bay.gruzin.eu
+        kuma.bazarr.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &bazarrHost bazarr.bay.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: bazarr-tls
+          hosts:
+            - *bazarrHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/media/configs/bazarr/config
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
+
+qbittorrent:
+  global:
+    fullnameOverride: qbittorrent
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: lscr.io/linuxserver/qbittorrent
+            # 4.3.9 -> 5.2.3 also crosses libtorrent 1.x -> 2.x, so resume data is
+            # rewritten on first start and torrents may recheck.
+            tag: "5.2.3_v2.0.14-ls477"
+            pullPolicy: Always
+          env:
+            <<: *arrEnv
+            WEBUI_PORT: "8080"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 8080
+      # Without this the Service becomes qbittorrent-main once the controller
+      # owns several, breaking every in-cluster reference.
+      forceRename: qbittorrent
+    tcp:
+      controller: main
+      type: LoadBalancer
+      loadBalancerIP: 192.168.0.242
+      ports:
+        bittorrent:
+          port: 6881
+          protocol: TCP
+    udp:
+      controller: main
+      type: LoadBalancer
+      loadBalancerIP: 192.168.0.241
+      ports:
+        bittorrent:
+          port: 6881
+          protocol: UDP
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+        gethomepage.dev/enabled: "true"
+        gethomepage.dev/group: Servarr
+        gethomepage.dev/name: qBittorrent
+        gethomepage.dev/icon: qbittorrent.png
+        gethomepage.dev/description: Torrenty
+        gethomepage.dev/weight: "50"
+        gethomepage.dev/widget.type: qbittorrent
+        gethomepage.dev/widget.url: http://qbittorrent.arr-stack.svc.cluster.local:8080
+        gethomepage.dev/widget.username: '{{ "{{HOMEPAGE_VAR_QBITTORRENT_USERNAME}}" }}'
+        gethomepage.dev/widget.password: '{{ "{{HOMEPAGE_VAR_QBITTORRENT_PASSWORD}}" }}'
+        kuma.qbittorrent.http.name: qBittorrent
+        kuma.qbittorrent.http.url: https://qbittorrent.gruzin.eu
+        kuma.qbittorrent.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &qbHost qbittorrent.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: qbittorrent-tls
+          hosts:
+            - *qbHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/opt/qbittorrent
+      globalMounts:
+        - path: /config
+    data: *mediaVolume
+    # Temporary alias: existing torrents record /media/downloads and would go
+    # missing without it. Drop once they are re-pathed onto /data.
+    legacy:
+      type: hostPath
+      hostPath: /mnt/hdd/media
+      globalMounts:
+        - path: /media
+
+jellyseerr:
+  global:
+    fullnameOverride: jellyseerr
+  controllers:
+    main:
+      type: deployment
+      strategy: Recreate
+      containers:
+        main:
+          image:
+            repository: ghcr.io/seerr-team/seerr
+            tag: "v3.4.1"
+            pullPolicy: Always
+          env:
+            TZ: Europe/Warsaw
+            LOG_LEVEL: info
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            # Raised from 512Mi, which the pod had accumulated 1271 restarts against.
+            limits:
+              cpu: 500m
+              memory: 1Gi
+  service:
+    main:
+      controller: main
+      primary: true
+      ports:
+        http:
+          port: 5055
+  ingress:
+    main:
+      enabled: true
+      className: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+        gethomepage.dev/enabled: "true"
+        gethomepage.dev/group: Servarr
+        gethomepage.dev/name: Jellyseerr
+        gethomepage.dev/icon: jellyseerr.png
+        gethomepage.dev/description: Zamowienia
+        gethomepage.dev/weight: "5"
+        gethomepage.dev/widget.type: jellyseerr
+        gethomepage.dev/widget.url: http://jellyseerr.arr-stack.svc.cluster.local:5055
+        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_JELLYSEERR_KEY}}" }}'
+        kuma.jellyseerr.http.name: Jellyseerr
+        kuma.jellyseerr.http.url: https://jellyseerr.gruzin.eu
+        kuma.jellyseerr.http.accepted_statuscodes: '["200-299"]'
+      hosts:
+        - host: &seerrHost jellyseerr.gruzin.eu
+          paths:
+            - path: /
+              pathType: Prefix
+              service:
+                identifier: main
+                port: http
+      tls:
+        - secretName: jellyseerr-tls
+          hosts:
+            - *seerrHost
+  persistence:
+    config:
+      type: hostPath
+      hostPath: /mnt/hdd/opt/jellyseerrconfig
+      globalMounts:
+        - path: /app/config
+
+# Converge-and-exit tool, so it runs as a CronJob. Keys come from Vault and are
+# referenced with !env_var, which needs each instance's API key pre-seeded.
+recyclarr:
+  enabled: true
+  image:
+    repository: ghcr.io/recyclarr/recyclarr
+    tag: "8.7.2"
+  schedule: "0 4 * * *"
+  vault:
+    vaultAuthRef: arr-stack
+    mount: secret
+    refreshAfter: 1h
+    keys:
+      SONARR_MAIN_API_KEY: sonarr/recyclarr
+      SONARR_ANIME_API_KEY: sonarr-anime/recyclarr
+      RADARR_MAIN_API_KEY: radarr/recyclarr
+  # Verify template names against `recyclarr list templates` for the pinned image.
+  config:
+    sonarr:
+      main:
+        base_url: http://sonarr.arr-stack.svc.cluster.local:8989
+        api_key_env: SONARR_MAIN_API_KEY
+        include:
+          - sonarr-quality-definition-series
+          - sonarr-v4-quality-profile-web-1080p
+          - sonarr-v4-custom-formats-web-1080p
+      anime:
+        base_url: http://sonarr-anime.arr-stack.svc.cluster.local:8989
+        api_key_env: SONARR_ANIME_API_KEY
+        include:
+          - sonarr-quality-definition-anime
+          - sonarr-v4-quality-profile-anime
+          - sonarr-v4-custom-formats-anime
+    radarr:
+      main:
+        base_url: http://radarr.arr-stack.svc.cluster.local:7878
+        api_key_env: RADARR_MAIN_API_KEY
+        include:
+          - radarr-quality-definition-movie
+          - radarr-v5-quality-profile-hd-bluray-web
+          - radarr-v5-custom-formats-hd-bluray-web
+
 jellyseerrOidc:
   enabled: true
   clientId: jellyseerr
   displayName: Jellyseerr
   keycloakCRName: keycloak
-  # The KeycloakOIDCClient and its copy of the credential are rendered into this
-  # namespace, not the app's: the operator resolves keycloakCRName only within the
-  # client's own namespace. See templates/ for the full explanation.
+  # Rendered into the keycloak namespace: the operator resolves keycloakCRName
+  # only within the client's own namespace.
   keycloakNamespace: keycloak
   realm: homelab
   # Credential source. VSO reads this KV entry and writes Secret/oidc-jellyseerr into
@@ -31,13 +556,8 @@ jellyfin:
     runAsUser: 1000
     runAsGroup: 1000
 
-  # Pod-level, so the container's uid 1000 carries the host's `render` group and
-  # can open /dev/dri/renderD128 for VAAPI. The node currently ships that node as
-  # 0666, which would work without this, but a driver or udev change tightening it
-  # back to the usual 0660 root:render would silently drop transcoding to software
-  # rather than fail loudly - so the membership is pinned instead of assumed.
-  # 105 is `render` on the Fedora node; it is not a well-known gid, re-check it
-  # with `getent group render` if the host is ever rebuilt.
+  # uid 1000 needs the host render group to open /dev/dri for VAAPI.
+  # gid 105 is render on this Fedora node; verify with getent group render.
   podSecurityContext:
     supplementalGroups: [105]
 
@@ -94,15 +614,14 @@ jellyfin:
     - name: movies
       hostPath:
         path: /mnt/hdd/media/contents/movies
+    - name: anime
+      hostPath:
+        path: /mnt/hdd/media/contents/anime
     - name: fonts
       hostPath:
         path: /mnt/hdd/media/configs/jellyfin/fonts
-    # Intel HD Graphics 530 (Skylake, 8086:1912) on the node. Single-node cluster,
-    # so a hostPath device is safe - there is nowhere else this pod can land. The
-    # jellyfin image already carries VAAPI/QSV ffmpeg and the iHD/i965 drivers, so
-    # the device is the only missing piece on the container side; the matching
-    # server-side switch is HardwareAccelerationType in encoding.xml, which lives
-    # in the config PV and is set through the Jellyfin UI.
+    # Single-node cluster, so a hostPath device is safe. Transcoding also needs
+    # HardwareAccelerationType set in encoding.xml via the Jellyfin UI.
     - name: dri
       hostPath:
         path: /dev/dri
@@ -112,6 +631,8 @@ jellyfin:
       mountPath: /tv
     - name: movies
       mountPath: /movies
+    - name: anime
+      mountPath: /anime
     - name: fonts
       mountPath: /usr/local/share/fonts/custom
       readOnly: true
@@ -133,10 +654,18 @@ homepageSecrets:
       path: sonarr/homepage
       env:
         HOMEPAGE_VAR_SONARR_KEY: api_key
+    - name: homepage-sonarr-anime
+      path: sonarr-anime/homepage
+      env:
+        HOMEPAGE_VAR_SONARR_ANIME_KEY: api_key
     - name: homepage-radarr
       path: radarr/homepage
       env:
         HOMEPAGE_VAR_RADARR_KEY: api_key
+    - name: homepage-bazarr
+      path: bazarr/homepage
+      env:
+        HOMEPAGE_VAR_BAZARR_KEY: api_key
     - name: homepage-prowlarr
       path: prowlarr/homepage
       env:
