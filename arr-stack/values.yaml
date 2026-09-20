@@ -484,6 +484,21 @@ jellyseerr:
       globalMounts:
         - path: /app/config
 
+# Namespace-level Vault wiring for this chart's non-OIDC secrets. `name` is what
+# recyclarr's VaultStaticSecrets resolve vaultAuthRef against - VaultAuth is
+# namespaced, so without this pair existing in arr-stack the secrets fail with
+# `VaultAuth "arr-stack" not found` and the sync-wave -1 gate blocks the release.
+#
+# `role` is the Vault Kubernetes auth role. vso is the role this namespace
+# already authenticates as (see jellyseerrOidc), so its policy must also grant
+# read on the secret/*/recyclarr paths listed below.
+vault:
+  enabled: true
+  name: arr-stack
+  address: http://transit-vault.transit-vault.svc.cluster.local:8200
+  role: vso
+  serviceAccount: default
+
 # Converge-and-exit tool, so it runs as a CronJob. Keys come from Vault and are
 # referenced with !env_var, which needs each instance's API key pre-seeded.
 recyclarr:
@@ -493,7 +508,6 @@ recyclarr:
     tag: "8.7.2"
   schedule: "0 4 * * *"
   vault:
-    vaultAuthRef: arr-stack
     mount: secret
     refreshAfter: 1h
     keys:

@@ -30,7 +30,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 spec:
-  vaultAuthRef: {{ $.Values.recyclarr.vault.vaultAuthRef }}
+  vaultAuthRef: {{ $.Values.vault.name }}
   type: kv-v2
   mount: {{ $.Values.recyclarr.vault.mount | quote }}
   path: {{ $path | quote }}

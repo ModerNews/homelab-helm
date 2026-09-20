@@ -1,0 +1,39 @@
+{{- with .Values.vault }}
+{{- if .enabled }}
+{{- /*
+Namespace-level Vault wiring, shared by every VaultStaticSecret in this chart
+that is not tied to a specific OIDC client (recyclarr's API keys today).
+
+VaultAuth and VaultConnection are namespaced, so a VaultStaticSecret can only
+reference one that exists in its own namespace - naming it here is what makes
+`vaultAuthRef` resolvable. The per-app OIDC clients deliberately keep their own
+oidc-<app> pair; they authenticate as the same role but are owned by the app
+that uses them.
+
+Waves put the connection before the auth before the secrets (-3, -2, -1), so
+VSO never sees a reference to something that has not been created yet.
+*/}}
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: {{ .name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  address: {{ .address | quote }}
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: {{ .name }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  vaultConnectionRef: {{ .name }}
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: {{ .role | quote }}
+    serviceAccount: {{ .serviceAccount | quote }}
+{{- end }}
+{{- end }}
