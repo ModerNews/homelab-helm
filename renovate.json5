@@ -130,6 +130,36 @@
       "matchUpdateTypes": ["patch"],
       "automerge": true,
       "automergeType": "branch"
+    },
+    {
+      // A versioning regex that only parses one channel's tag shape keeps Renovate
+      // from crossing lanes - loose would happily jump nightly -> stable.
+      "matchPackageNames": ["lscr.io/linuxserver/sonarr"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      "matchPackageNames": [
+        "lscr.io/linuxserver/radarr",
+        "lscr.io/linuxserver/prowlarr"
+      ],
+      "versioning": "regex:^nightly-(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      "matchPackageNames": ["lscr.io/linuxserver/bazarr"],
+      "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-ls(?<revision>\\d+)$"
+    },
+    {
+      // Default lane carries a _v2.x build segment; libtorrentv1-* is a separate one.
+      "matchPackageNames": ["lscr.io/linuxserver/qbittorrent"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)_v(?<build>[\\d.]+)-ls(?<revision>\\d+)$"
+    },
+    {
+      // arr-stack moves fast and is easy to roll back; let minors land unattended
+      // too. Majors still need review - no rule enables them.
+      "matchFileNames": ["arr-stack/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "branch"
     }
   ]
 }

@@ -1,0 +1,103 @@
+{{- with .Values.recyclarr }}
+{{- if .enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recyclarr-config
+data:
+  recyclarr.yml: |
+    {{- range $app, $instances := .config }}
+    {{ $app }}:
+      {{- range $name, $inst := $instances }}
+      {{ $name }}:
+        base_url: {{ $inst.base_url }}
+        api_key: !env_var {{ $inst.api_key_env }}
+        include:
+          {{- range $inst.include }}
+          - template: {{ . }}
+          {{- end }}
+      {{- end }}
+    {{- end }}
+# One resource per key: VaultStaticSecret reads a single KV path and each
+# instance's key lives under its own.
+{{- range $env, $path := .vault.keys }}
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: recyclarr-{{ $env | lower | replace "_" "-" }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  vaultAuthRef: {{ $.Values.recyclarr.vault.vaultAuthRef }}
+  type: kv-v2
+  mount: {{ $.Values.recyclarr.vault.mount | quote }}
+  path: {{ $path | quote }}
+  refreshAfter: {{ $.Values.recyclarr.vault.refreshAfter | quote }}
+  destination:
+    name: recyclarr-{{ $env | lower | replace "_" "-" }}
+    create: true
+    transformation:
+      excludeRaw: true
+      templates:
+        {{ $env }}:
+          text: '{{ printf "{{ .Secrets.api_key }}" }}'
+{{- end }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: recyclarr
+spec:
+  schedule: {{ .schedule | quote }}
+  timeZone: Europe/Warsaw
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          containers:
+            - name: recyclarr
+              image: "{{ .image.repository }}:{{ .image.tag }}"
+              args: ["sync"]
+              env:
+                - name: TZ
+                  value: Europe/Warsaw
+              envFrom:
+                {{- range $env, $path := $.Values.recyclarr.vault.keys }}
+                - secretRef:
+                    name: recyclarr-{{ $env | lower | replace "_" "-" }}
+                {{- end }}
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+              volumeMounts:
+                # /config stays writable: recyclarr clones the guides repo into it.
+                - name: config
+                  mountPath: /config
+                - name: config-file
+                  mountPath: /config/recyclarr.yml
+                  subPath: recyclarr.yml
+                  readOnly: true
+          volumes:
+            - name: config
+              hostPath:
+                path: /mnt/hdd/media/configs/recyclarr
+                type: DirectoryOrCreate
+            - name: config-file
+              configMap:
+                name: recyclarr-config
+{{- end }}
+{{- end }}

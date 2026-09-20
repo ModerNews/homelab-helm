@@ -1,13 +1,50 @@
 apiVersion: v2
 name: arr-stack
 type: application
-version: 0.2.0
+version: 0.3.0
 
 maintainers:
   - name: Grzegorz Jagielski
     url: https://github.com/ModerNews
 
+# Versions are repeated literally rather than shared via a YAML anchor: Renovate
+# rewrites the literal string and cannot resolve an alias.
 dependencies:
   - name: jellyfin
     version: "3.2.0"
     repository: "https://jellyfin.github.io/jellyfin-helm"
+
+  - name: app-template
+    alias: sonarr
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: sonarr-anime
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: radarr
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: prowlarr
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: bazarr
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: qbittorrent
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
+
+  - name: app-template
+    alias: jellyseerr
+    version: "5.2.1"
+    repository: "https://bjw-s-labs.github.io/helm-charts/"
