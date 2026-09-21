@@ -87,67 +87,6 @@ sonarr:
         - path: /config
     data: *mediaVolume
 
-# Separate instance, not a profile: Series Type, naming format and root folder
-# are instance-wide settings in Sonarr.
-sonarr-anime:
-  global:
-    fullnameOverride: sonarr-anime
-    nameOverride: sonarr-anime
-  controllers:
-    main:
-      type: deployment
-      strategy: Recreate
-      containers:
-        main:
-          image:
-            repository: lscr.io/linuxserver/sonarr
-            tag: "4.0.20.3014-ls325"
-            pullPolicy: Always
-          env: *arrEnv
-          resources: *arrResources
-  service:
-    main:
-      controller: main
-      primary: true
-      ports:
-        http:
-          port: 8989
-  ingress:
-    main:
-      enabled: true
-      className: traefik
-      annotations:
-        <<: *arrIngressAnnotations
-        gethomepage.dev/name: Sonarr (Anime)
-        gethomepage.dev/icon: sonarr.png
-        gethomepage.dev/description: Anime
-        gethomepage.dev/weight: "15"
-        gethomepage.dev/widget.type: sonarr
-        gethomepage.dev/widget.url: http://sonarr-anime.arr-stack.svc.cluster.local:8989
-        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_SONARR_ANIME_KEY}}" }}'
-        kuma.sonarr-anime.http.name: Sonarr Anime
-        kuma.sonarr-anime.http.url: https://sonarr-anime.bay.gruzin.eu
-        kuma.sonarr-anime.http.accepted_statuscodes: '["200-299"]'
-      hosts:
-        - host: &sonarrAnimeHost sonarr-anime.bay.gruzin.eu
-          paths:
-            - path: /
-              pathType: Prefix
-              service:
-                identifier: main
-                port: http
-      tls:
-        - secretName: sonarr-anime-tls
-          hosts:
-            - *sonarrAnimeHost
-  persistence:
-    config:
-      type: hostPath
-      hostPath: /mnt/hdd/media/configs/sonarr-anime/data
-      globalMounts:
-        - path: /config
-    data: *mediaVolume
-
 radarr:
   global:
     fullnameOverride: radarr
@@ -324,79 +263,6 @@ bazarr:
         - path: /config
     data: *mediaVolume
 
-
-# Second Bazarr, dedicated to sonarr-anime. Bazarr connects to exactly ONE Sonarr
-# (its settings model `sonarr` as a single object, not a list), so covering both
-# sonarr and sonarr-anime needs two instances - there is no multi-instance mode.
-#
-# Split of responsibilities:
-#   bazarr        -> sonarr (series) + radarr (movies), OpenSubtitles
-#   bazarr-anime  -> sonarr-anime only, animesub.info (ANSI) + AniDB matching
-#
-# Providers are global PER INSTANCE (`general.enabled_providers`), which is the
-# real reason this split works: ANSI belongs only on the anime side.
-bazarr-anime:
-  global:
-    # Both overrides are required. fullnameOverride alone names the resources but
-    # leaves app.kubernetes.io/name defaulting to the parent chart, so every
-    # app-template instance renders an IDENTICAL selector and the Deployments
-    # fight over each other's pods. See the sibling entries.
-    fullnameOverride: bazarr-anime
-    nameOverride: bazarr-anime
-  controllers:
-    main:
-      type: deployment
-      strategy: Recreate
-      containers:
-        main:
-          image:
-            repository: lscr.io/linuxserver/bazarr
-            tag: "v1.6.1-ls364"
-            pullPolicy: Always
-          env: *arrEnv
-          resources: *arrResources
-  service:
-    main:
-      controller: main
-      primary: true
-      ports:
-        http:
-          port: 6767
-  ingress:
-    main:
-      enabled: true
-      className: traefik
-      annotations:
-        <<: *arrIngressAnnotations
-        gethomepage.dev/name: Bazarr (Anime)
-        gethomepage.dev/icon: bazarr.png
-        gethomepage.dev/description: Napisy anime
-        gethomepage.dev/weight: "45"
-        gethomepage.dev/widget.type: bazarr
-        gethomepage.dev/widget.url: http://bazarr-anime.arr-stack.svc.cluster.local:6767
-        gethomepage.dev/widget.key: '{{ "{{HOMEPAGE_VAR_BAZARR_ANIME_KEY}}" }}'
-        kuma.bazarr-anime.http.name: Bazarr Anime
-        kuma.bazarr-anime.http.url: https://bazarr-anime.bay.gruzin.eu
-        kuma.bazarr-anime.http.accepted_statuscodes: '["200-299"]'
-      hosts:
-        - host: &bazarrAnimeHost bazarr-anime.bay.gruzin.eu
-          paths:
-            - path: /
-              pathType: Prefix
-              service:
-                identifier: main
-                port: http
-      tls:
-        - secretName: bazarr-anime-tls
-          hosts:
-            - *bazarrAnimeHost
-  persistence:
-    config:
-      type: hostPath
-      hostPath: /mnt/hdd/media/configs/bazarr-anime/config
-      globalMounts:
-        - path: /config
-    data: *mediaVolume
 qbittorrent:
   global:
     fullnameOverride: qbittorrent
@@ -593,7 +459,6 @@ recyclarr:
     refreshAfter: 1h
     keys:
       SONARR_MAIN_API_KEY: sonarr/api-key
-      SONARR_ANIME_API_KEY: sonarr-anime/api-key
       RADARR_MAIN_API_KEY: radarr/api-key
   # Bodies below are the TRaSH Guides root templates, inlined. Recyclarr's
   # `include:` mechanism is NOT used: as of 8.x the official config-templates
@@ -602,38 +467,40 @@ recyclarr:
   # friends) resolve against nothing and abort the whole sync. Regenerate a body
   # with `recyclarr config create -t <template>` and paste it here.
   #
-  #   sonarr.main  <- web-1080p                 radarr.main <- hd-bluray-web
-  #   sonarr.anime <- sonarr-anime-remux-1080p
+  #   sonarr.series <- web-1080p AND sonarr-anime-remux-1080p (one instance)
+  #   radarr.movies <- hd-bluray-web
+  #
+  # Instance names must be unique ACROSS services, not just within one: the CLI's
+  # `--instance` flag takes a bare name with no service qualifier, so a `main` under
+  # both sonarr and radarr collides and recyclarr SILENTLY drops both
+  # (`[DBG] Duplicate instances: ["main"]`). Hence series/movies, not main/main.
   config:
     sonarr:
+      # One Sonarr serves both anime and non-anime. Sonarr differentiates per
+      # series (Series Type, quality profile, root folder), and Jellyseerr drives
+      # that split through its per-server anime fields.
+      #
+      # `quality_definition` is the one anime-relevant setting that is NOT
+      # per-series - it is a single instance-wide MB/min table. `anime` is chosen
+      # deliberately: its floor is 5 MB/min against `series`' 15, and anime
+      # compresses well enough that a good 1080p WEB release often lands at 6-8.
+      # Under the `series` table those get rejected as too small. The cost is that
+      # live action loses its size floor, so weak encodes are caught by custom
+      # format scoring instead. Do not "fix" this back to `series` without moving
+      # anime to its own instance.
       series:
         base_url: http://sonarr.arr-stack.svc.cluster.local:8989
         api_key_env: SONARR_MAIN_API_KEY
         quality_definition:
-          type: series
+          type: anime
         quality_profiles:
           - trash_id: 72dae194fc92bf828f32cde7744e51a1   # WEB-1080p
             reset_unmatched_scores:
               enabled: true
-        custom_format_groups:
-          add:
-            - trash_id: 158188097a58d7687dee647e04af0da3  # [Optional] Golden Rule HD
-            - trash_id: 74aff4168620ed49dcc67e92b2c2a5b4  # [Optional] Language Profiles
-            - trash_id: 85fae4a2294965b75710ef2989c850eb  # [Streaming Services] HD/UHD boost
-            - trash_id: 59c3af66780d08332fdc64e68297098f  # [Unwanted] Unwanted Formats
-
-      # The guide's anime profile is Remux-first (~10-15GB/episode). The array is
-      # at 78% with ~500G free, so the cutoff is pulled down to WEB 1080p - one
-      # season of remux would eat most of the remaining headroom. The anime custom
-      # formats and `quality_definition: anime` are kept; only the ceiling moves.
-      # No custom_format_groups: the upstream template ships an empty `add:` and
-      # relies on the required CFs, which recyclarr syncs automatically.
-      anime:
-        base_url: http://sonarr-anime.arr-stack.svc.cluster.local:8989
-        api_key_env: SONARR_ANIME_API_KEY
-        quality_definition:
-          type: anime
-        quality_profiles:
+          # Remux-first in the guide (~10-15GB/episode). The array runs ~78% full,
+          # so the ceiling is pulled down to WEB 1080p; one remux season would eat
+          # most of the remaining headroom. Verified applied: the synced profile
+          # came back with cutoff=WEB 1080p and Remux absent from the allowed set.
           - trash_id: 20e0fc959f1f1704bed501f23bdae76f   # [Anime] Remux-1080p
             upgrade:
               allowed: true
@@ -641,6 +508,24 @@ recyclarr:
               until_score: 10000
             reset_unmatched_scores:
               enabled: true
+        # Scoped with assign_scores_to. Without it these groups apply to EVERY
+        # profile in the instance, which would push live-action scoring onto the
+        # anime profile. The anime profile carries no groups of its own: upstream
+        # ships an empty `add:` and leans on required CFs, which sync regardless.
+        custom_format_groups:
+          add:
+            - trash_id: 158188097a58d7687dee647e04af0da3  # [Optional] Golden Rule HD
+              assign_scores_to:
+                - trash_id: 72dae194fc92bf828f32cde7744e51a1
+            - trash_id: 74aff4168620ed49dcc67e92b2c2a5b4  # [Optional] Language Profiles
+              assign_scores_to:
+                - trash_id: 72dae194fc92bf828f32cde7744e51a1
+            - trash_id: 85fae4a2294965b75710ef2989c850eb  # [Streaming Services] HD/UHD boost
+              assign_scores_to:
+                - trash_id: 72dae194fc92bf828f32cde7744e51a1
+            - trash_id: 59c3af66780d08332fdc64e68297098f  # [Unwanted] Unwanted Formats
+              assign_scores_to:
+                - trash_id: 72dae194fc92bf828f32cde7744e51a1
 
     radarr:
       # `quality_definition` is instance-global: it rewrites size limits for every
@@ -799,10 +684,6 @@ homepageSecrets:
       path: sonarr/api-key
       env:
         HOMEPAGE_VAR_SONARR_KEY: api_key
-    - name: homepage-sonarr-anime
-      path: sonarr-anime/api-key
-      env:
-        HOMEPAGE_VAR_SONARR_ANIME_KEY: api_key
     - name: homepage-radarr
       path: radarr/api-key
       env:
@@ -811,10 +692,6 @@ homepageSecrets:
       path: bazarr/api-key
       env:
         HOMEPAGE_VAR_BAZARR_KEY: api_key
-    - name: homepage-bazarr-anime
-      path: bazarr-anime/api-key
-      env:
-        HOMEPAGE_VAR_BAZARR_ANIME_KEY: api_key
     - name: homepage-prowlarr
       path: prowlarr/homepage
       env:
