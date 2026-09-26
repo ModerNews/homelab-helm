@@ -40,7 +40,7 @@ sonarr:
             # v2.0.0 -> v4 in one step. Back up nzbdrone.db first; if v4 refuses the
             # schema, stage through 3.0.10.1567-ls218 and retry.
             repository: lscr.io/linuxserver/sonarr
-            tag: "4.0.20.3014-ls325"
+            tag: "4.0.20.3014-ls326"
             pullPolicy: Always
           env: *arrEnv
           resources: *arrResources
@@ -99,7 +99,7 @@ radarr:
         main:
           image:
             repository: lscr.io/linuxserver/radarr
-            tag: "nightly-6.4.4.10698-ls20"
+            tag: "nightly-6.4.4.10704-ls20"
             pullPolicy: Always
           env: *arrEnv
           resources: *arrResources
@@ -158,7 +158,7 @@ prowlarr:
         main:
           image:
             repository: lscr.io/linuxserver/prowlarr
-            tag: "nightly-2.6.5.5620-ls16"
+            tag: "nightly-2.6.5.5620-ls17"
             pullPolicy: Always
           env: *arrEnv
           resources: *arrResources
@@ -216,7 +216,7 @@ bazarr:
         main:
           image:
             repository: lscr.io/linuxserver/bazarr
-            tag: "v1.6.1-ls364"
+            tag: "v1.6.2-ls366"
             pullPolicy: Always
           env: *arrEnv
           resources: *arrResources
@@ -277,7 +277,7 @@ qbittorrent:
             repository: lscr.io/linuxserver/qbittorrent
             # 4.3.9 -> 5.2.3 also crosses libtorrent 1.x -> 2.x, so resume data is
             # rewritten on first start and torrents may recheck.
-            tag: "5.2.3_v2.0.14-ls477"
+            tag: "5.2.3_v2.0.15-ls478"
             pullPolicy: Always
           env:
             <<: *arrEnv
