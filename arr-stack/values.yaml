@@ -99,7 +99,7 @@ radarr:
         main:
           image:
             repository: lscr.io/linuxserver/radarr
-            tag: "nightly-6.4.4.10698-ls20"
+            tag: "nightly-7.0.0.10771-ls25"
             pullPolicy: Always
           env: *arrEnv
           resources: *arrResources
