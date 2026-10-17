@@ -51,7 +51,6 @@ vault:
     - homepage-tailscale
     - homepage-jellyfin
     - homepage-sonarr
-    - homepage-sonarr-anime
     - homepage-radarr
     - homepage-prowlarr
     - homepage-bazarr
