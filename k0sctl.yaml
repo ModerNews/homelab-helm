@@ -103,7 +103,7 @@ spec:
                       memory: 256Mi
               - name: traefik
                 chartname: traefik/traefik
-                version: "41.6.0"
+                version: "42.0.0"
                 namespace: traefik
                 order: 4
                 values: |2
