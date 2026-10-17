@@ -1,0 +1,64 @@
+name: Validate
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      charts: ${{ steps.find.outputs.charts }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: find
+        run: |
+          charts=$(find . -name Chart.yaml -not -path './*/charts/*' -printf '%h\n' \
+            | sed 's|^\./||' | sort | jq -R . | jq -sc .)
+          echo "charts=$charts" >> "$GITHUB_OUTPUT"
+          echo "$charts"
+
+  helm:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJSON(needs.discover.outputs.charts) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+
+      - name: Resolve dependencies
+        run: |
+          if grep -q '^dependencies:' "${{ matrix.chart }}/Chart.yaml"; then
+            helm dependency update "${{ matrix.chart }}"
+          fi
+
+      - name: Lint
+        run: helm lint "${{ matrix.chart }}"
+
+      - name: Template
+        run: helm template "${{ matrix.chart }}" > /dev/null
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Parse YAML
+        run: |
+          rc=0
+          while IFS= read -r file; do
+            if ! yq -e 'true' "$file" > /dev/null 2>&1; then
+              echo "::error file=$file::failed to parse"
+              rc=1
+            fi
+          done < <(find .argocd manifests -type f \( -name '*.yaml' -o -name '*.yml' \) 2>/dev/null; echo k0sctl.yaml)
+          exit $rc

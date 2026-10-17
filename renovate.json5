@@ -2,8 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "timezone": "Europe/Warsaw",
+  "prConcurrentLimit": 6,
+  "prHourlyLimit": 2,
+  "minimumReleaseAge": "3 days",
+  "rebaseWhen": "conflicted",
+  "separateMinorPatch": true,
   "argocd": {
-    "fileMatch": ["(^|/)\\.argocd/.+\\.ya?ml$"]
+    "managerFilePatterns": ["/(^|/)\\.argocd/.+\\.ya?ml$/"]
   },
   "customManagers": [
     {
@@ -70,11 +75,25 @@
       // Bare `image:` refs inside Helm templates, which no built-in manager reads
       "customType": "regex",
       "managerFilePatterns": ["/^.+/templates/.+\\.ya?ml$/", "/^whoami\\.yaml$/"],
-      "matchStrings": ["image:\\s+[\"']?(?<depName>[^\\s\"':]+):(?<currentValue>[^\\s\"']+)[\"']?"],
+      "matchStrings": ["image(?:Name)?:\\s+[\"']?(?<depName>[^\\s\"':]+):(?<currentValue>[^\\s\"']+)[\"']?"],
       "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
+    {
+      "matchUpdateTypes": ["major"],
+      "addLabels": ["major", "needs-review"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "addLabels": ["minor"]
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "addLabels": ["patch"],
+      "automerge": true,
+      "automergeType": "branch"
+    },
     {
       "matchManagers": ["argocd"],
       "rangeStrategy": "pin"
@@ -102,7 +121,7 @@
       "matchDepNames": ["k0sproject/k0s"],
       "automerge": false,
       "dependencyDashboardApproval": true,
-      "addLabels": ["k0s", "node-reboot"]
+      "addLabels": ["k0s", "node-reboot", "needs-review"]
     },
     {
       // Cluster-level extensions land via k0sctl apply, not ArgoCD - group them
@@ -117,19 +136,58 @@
         "external-dns"
       ],
       "groupName": "k0s cluster extensions",
-      "addLabels": ["k0sctl"],
-      "automerge": false
+      "addLabels": ["k0sctl", "needs-review"],
+      "automerge": false,
+      "separateMinorPatch": false
+    },
+    {
+      "matchFileNames": [
+        "excalidraw/**",
+        "glances/**",
+        "home-assistant/**",
+        "homepage/**",
+        "immich/**",
+        "memos/**",
+        "paperless/**",
+        "speedtest-tracker/**",
+        "wireguard/**"
+      ],
+      "groupName": "apps",
+      "addLabels": ["apps"]
+    },
+    {
+      "matchFileNames": [".argocd/**"],
+      "addLabels": ["infra"]
+    },
+    {
+      "matchFileNames": ["keycloak/**", ".argocd/keycloakOperatorApplication.yaml"],
+      "groupName": "identity",
+      "addLabels": ["infra"]
+    },
+    {
+      "matchFileNames": ["transit-vault/**", "vault-secrets-operator/**"],
+      "groupName": "secrets",
+      "addLabels": ["infra"]
+    },
+    {
+      "matchFileNames": ["postgres/**"],
+      "addLabels": ["infra"]
+    },
+    {
+      "matchFileNames": ["ArgoCD/**"],
+      "addLabels": ["infra"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "addLabels": ["ci"]
     },
     {
       // Everything in the *arr stack moves together
       "matchFileNames": ["arr-stack/**"],
       "groupName": "arr-stack",
-      "addLabels": ["media"]
-    },
-    {
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "automergeType": "branch"
+      "addLabels": ["media"],
+      "separateMinorPatch": false
     },
     {
       // A versioning regex that only parses one channel's tag shape keeps Renovate
@@ -160,6 +218,12 @@
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "branch"
+    },
+    {
+      "matchPackageNames": ["ghcr.io/tensorchord/cloudnative-vectorchord"],
+      "versioning": "regex:^(?<compatibility>\\d+)\\.(?<major>\\d+)-(?<minor>\\d+)\\.(?<patch>\\d+)\\.(?<build>\\d+)$",
+      "automerge": false,
+      "addLabels": ["needs-review"]
     }
   ]
 }
