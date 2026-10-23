@@ -614,10 +614,34 @@ argo-cd:
       - recipients:
           - github
         triggers:
+          - on-sync-running
           - on-sync-succeeded
           - on-sync-failed
 
+    # Each template drives both a commit status and a GitHub Deployment. The
+    # service lists deployments for (ref, environment) and reuses the first one
+    # it finds, so on-sync-running opens the deployment and the terminal
+    # triggers only add a status to it - one environment per app, named after it.
+    #
+    # No environmentURL: it cannot be derived from the template context, and a
+    # guessed https://<app>.gruzin.eu would be wrong for arr-stack and a lie for
+    # the apps that have no ingress at all.
     templates:
+      template.app-sync-running: |
+        github:
+          repoURLPath: "{{.app.spec.source.repoURL}}"
+          # syncResult is not populated while the operation is in flight, so take
+          # the revision off the operation itself.
+          revisionPath: "{{.app.status.operationState.operation.sync.revision}}"
+          status:
+            state: pending
+            label: "argocd/{{.app.metadata.name}}"
+            targetURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+          deployment:
+            state: in_progress
+            environment: "{{.app.metadata.name}}"
+            logURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+            requiredContexts: []
       template.app-sync-succeeded: |
         github:
           repoURLPath: "{{.app.spec.source.repoURL}}"
@@ -626,6 +650,11 @@ argo-cd:
             state: success
             label: "argocd/{{.app.metadata.name}}"
             targetURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+          deployment:
+            state: success
+            environment: "{{.app.metadata.name}}"
+            logURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+            requiredContexts: []
       template.app-sync-failed: |
         github:
           repoURLPath: "{{.app.spec.source.repoURL}}"
@@ -634,8 +663,16 @@ argo-cd:
             state: failure
             label: "argocd/{{.app.metadata.name}}"
             targetURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+          deployment:
+            state: failure
+            environment: "{{.app.metadata.name}}"
+            logURL: "https://argocd.gruzin.eu/applications/{{.app.metadata.name}}"
+            requiredContexts: []
 
     triggers:
+      trigger.on-sync-running: |
+        - when: app.status.operationState.phase in ['Running']
+          send: [app-sync-running]
       trigger.on-sync-succeeded: |
         - when: app.status.operationState.phase in ['Succeeded']
           send: [app-sync-succeeded]
