@@ -150,6 +150,7 @@
         "memos/**",
         "paperless/**",
         "speedtest-tracker/**",
+        "upsnap/**",
         "wireguard/**"
       ],
       "groupName": "apps",

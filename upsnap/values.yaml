@@ -1,0 +1,87 @@
+image:
+  repository: ghcr.io/seriousm4x/upsnap
+  tag: "5.7.2"
+  pullPolicy: IfNotPresent
+
+timezone: Europe/Warsaw
+
+# UpSnap listens on this port directly on the node - the pod runs in the host
+# network namespace, so there is no port mapping in between.
+port: 8090
+
+websiteTitle: UpSnap
+
+logLevel: INFO
+
+# Device ping interval, as a 6-field cron expression (upstream default).
+interval: "*/10 * * * * *"
+
+scan:
+  # Device discovery and ARP-based IP tracking sweep this range with nmap.
+  # Matches the LAN the node and gruzin-desktop share.
+  range: 192.168.0.0/24
+  timeout: 500ms
+
+# Privileged ping needs NET_RAW, which the pod holds. The unprivileged path
+# would need net.ipv4.ping_group_range widened on the node instead.
+pingPrivileged: true
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: local-path
+  accessMode: ReadWriteOnce
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: upsnap.gruzin.eu
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: true
+    secretName: upsnap-tls
+
+homepage:
+  enabled: true
+  name: UpSnap
+  group: Devices
+  icon: upsnap.png
+  description: Wake-on-LAN
+  weight: 30
+  # Homepage pings this server-side for the up/down dot - the only thing in the
+  # cluster that consumes availability data today. PocketBase has no /metrics.
+  siteMonitor: http://upsnap.upsnap.svc.cluster.local/api/health
+
+# Keycloak client for UpSnap, rendered by templates/oidc-client.yaml.
+#
+# The credential lives in Vault at `secret/oidc/upsnap` and VSO materialises it -
+# nothing here generates or holds it. UpSnap's own side of the pairing is a paste
+# into the PocketBase admin UI (collections > users > Options > OAuth2) and
+# cannot be declared.
+oidc:
+  enabled: true
+  clientId: upsnap
+  displayName: UpSnap
+  keycloakCRName: keycloak
+  # The KeycloakOIDCClient and its copy of the credential are rendered into this
+  # namespace, not the app's: the operator resolves keycloakCRName only within the
+  # client's own namespace. See templates/oidc-client.yaml for the full explanation.
+  keycloakNamespace: keycloak
+  realm: homelab
+  vault:
+    address: http://transit-vault.transit-vault.svc.cluster.local:8200
+    mount: secret
+    path: oidc/upsnap
+    refreshAfter: 1h
+  redirectUris:
+    # PocketBase's fixed OAuth2 callback route (apis.bindRecordAuthApi).
+    - https://upsnap.gruzin.eu/api/oauth2-redirect

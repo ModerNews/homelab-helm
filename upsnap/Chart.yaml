@@ -1,0 +1,10 @@
+apiVersion: v2
+name: upsnap
+description: Wake-on-LAN dashboard for LAN devices, including the gruzin-desktop workstation
+type: application
+version: 0.1.0
+appVersion: "5.7.2"
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews
