@@ -43,8 +43,10 @@ a second Vault beside it.
 
 ## First deploy
 
-1. Let ArgoCD sync the `vault` StatefulSet (the init Job will crash-loop
-   harmlessly until step 2-3 are done - that's expected).
+Everything below is a one-time, by-hand bootstrap - nothing in the cluster holds a
+Vault token to do it for you, deliberately ("Why no init Job" below).
+
+1. Let ArgoCD sync the `vault` StatefulSet.
 
 2. Initialize and unseal it manually:
 
@@ -55,59 +57,38 @@ a second Vault beside it.
    # repeat with 3 distinct key shares
    ```
 
-3. Using the root token, mint a narrowly-scoped token for the init Job instead
-   of handing it root - it only ever needs to mount `transit`, write one
-   policy, and issue one child token:
+3. In the same session, bootstrap the transit engine and mint the token the remote
+   Vault will seal against. The last command prints the token - copy it straight
+   into your password manager, it is shown only once:
 
    ```bash
    kubectl exec -n transit-vault -it transit-vault-0 -- sh -c '
-     vault login <root token>
+     vault login <root token from step 2>
 
-     vault policy write transit-init - <<EOF
-   path "sys/mounts/transit" {
-     capabilities = ["create", "read", "update", "sudo"]
+     vault secrets enable transit
+     vault write -f transit/keys/remote-vault-unseal
+
+     vault policy write transit-unseal - <<EOF
+   path "transit/encrypt/remote-vault-unseal" {
+     capabilities = ["update"]
    }
-   path "sys/policies/acl/transit-unseal" {
-     capabilities = ["create", "update"]
-   }
-   path "transit/keys/remote-vault-unseal" {
-     capabilities = ["create", "update"]
-   }
-   path "auth/token/create" {
-     capabilities = ["create", "update", "sudo"]
+   path "transit/decrypt/remote-vault-unseal" {
+     capabilities = ["update"]
    }
    EOF
 
-     vault token create -orphan -policy=transit-init -period=768h -field=token
+     vault token create -orphan -period=768h -policy=transit-unseal -field=token
    '
    ```
 
-   The root token is only needed for this one session - discard it (or lock it
-   away offline) afterwards, don't store it in the cluster.
+   The token is periodic, not expiring: the remote Vault's seal client renews it
+   automatically as long as it stays in continuous use. It is `-orphan` so revoking
+   the root token later does not take it down with it.
 
-4. Put the scoped token in the secret the init Job reads (still named after
-   the values.yaml `rootTokenSecretName` field, but holds the scoped token
-   from step 3, not the actual root token):
+4. Configure the remote Vault with that token - see "Remote Vault seal stanza" below.
+   That cluster is unmanaged from here, so this is always a manual copy.
 
-   ```bash
-   cp vault-root-token.example.yaml vault-root-token.yaml
-   # fill in the token from step 3, not the root token
-   kubectl apply -f vault-root-token.yaml
-   ```
-
-5. Let the init Job (re)run - it enables the `transit` engine, creates the
-   `remote-vault-unseal` key and `transit-unseal` policy, and writes a
-   periodic token into `secret/transit-vault-unseal-token`. It is idempotent
-   and safe to re-run on every deploy - it leaves the token alone once created.
-
-6. Copy the token out to configure the remote Vault:
-
-   ```bash
-   kubectl get secret -n transit-vault transit-vault-unseal-token \
-     -o jsonpath='{.data.token}' | base64 -d
-   ```
-
-7. Configure this cluster's own side - the `secret/` KV mount, Kubernetes auth, the
+5. Configure this cluster's own side - the `secret/` KV mount, Kubernetes auth, the
    `oidc-read` policy, the `vso` role and one credential per OIDC client. All of
    that is declared in [terraform/](../terraform):
 
@@ -122,6 +103,26 @@ a second Vault beside it.
 
    Discard the root token afterwards - nothing in the cluster needs it.
 
+## Why no init Job
+
+This chart used to ship a Job that enabled `transit`, wrote the key and policy, and
+stored a minted token in a Secret. It was removed rather than fixed, because the
+work it did is one-time bootstrap that cannot be made to converge:
+
+- It could not run before a human had already run `vault operator init` and
+  `vault operator unseal`, so it never removed a manual step - it only moved four
+  `vault` commands out of the session where you are already typing by hand.
+- Feeding it a Vault token meant keeping one in a Secret (`transit-vault-root-token`,
+  applied out of band), plus a ServiceAccount with rights to create Secrets in the
+  namespace. Both existed purely to hand a token back to a human, who then copied it
+  into the remote cluster manually.
+- As a Kubernetes Job it had no stable resting state. `spec.template` is immutable,
+  so editing it failed the sync; the workaround (`Replace=true,Force=true`) made
+  ArgoCD delete and recreate the Job on *every* sync, so it re-fired continuously
+  instead of once.
+
+If this ever wants to be declarative again, the right home is Terraform, next to the
+`secret/` mount and OIDC config it already manages - not a Job in this chart.
 ## Remote Vault seal stanza
 
 On the remote Vault instance, add:
@@ -129,7 +130,7 @@ On the remote Vault instance, add:
 ```hcl
 seal "transit" {
   address         = "https://transit-vault.gruzin.eu"
-  token           = "<token from step 6>"
+  token           = "<token from step 3>"
   disable_renewal = "false"
   key_name        = "remote-vault-unseal"
   mount_path      = "transit/"
