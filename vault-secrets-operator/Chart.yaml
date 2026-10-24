@@ -10,5 +10,5 @@ maintainers:
 
 dependencies:
   - name: vault-secrets-operator
-    version: "1.6.0"
+    version: "1.6.2"
     repository: "https://helm.releases.hashicorp.com"
