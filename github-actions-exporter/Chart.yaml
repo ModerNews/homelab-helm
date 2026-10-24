@@ -1,0 +1,9 @@
+apiVersion: v2
+name: github-actions-exporter
+description: Test rig for github-actions-exporter - Vault wiring and a throwaway Prometheus
+type: application
+version: 0.1.0
+
+maintainers:
+  - name: Grzegorz Jagielski
+    url: https://github.com/ModerNews

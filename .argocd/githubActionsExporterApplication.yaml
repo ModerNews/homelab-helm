@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: github-actions-exporter
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # The exporter chart lives in the application's own repo and is also
+    # published to oci://ghcr.io/modernews/charts. It is referenced here as git
+    # rather than OCI on purpose: the OCI copy only appears once a release has
+    # run for a given Chart.yaml version, so a git ref is what lets this rig
+    # track an unreleased chart - which is the whole point of a test rig.
+    - repoURL: https://github.com/ModerNews/github-actions-exporter.git
+      # ---------------------------------------------------------------------
+      # The chart is NOT on main yet - it currently exists only on the
+      # feat/helm, ci/helm and fix/jobs_seconds_queue branches. Until it is
+      # merged this must name one of those, or Argo fails the source with
+      # "app path does not exist". Change this one line, nothing else.
+      # ---------------------------------------------------------------------
+      targetRevision: main
+      path: helm
+      helm:
+        releaseName: github-actions-exporter
+        valueFiles:
+          - $values/github-actions-exporter/values.yaml
+    # The rig this repo owns: Vault wiring for the webhook secret and the ngrok
+    # authtoken, plus the throwaway Prometheus that scrapes the exporter.
+    - repoURL: https://github.com/ModerNews/homelab-helm.git
+      targetRevision: HEAD
+      path: github-actions-exporter
+      helm:
+        releaseName: github-actions-exporter-rig
+    - repoURL: https://github.com/ModerNews/homelab-helm.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: github-actions-exporter
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true

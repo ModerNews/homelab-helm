@@ -1,0 +1,172 @@
+# This file is consumed TWICE, exactly like memos/values.yaml:
+#
+#   * the Argo Application hands it to the upstream github-actions-exporter
+#     chart (pulled from its own git repo) via $values, and
+#   * it is the values file for the local rig chart in this directory.
+#
+# So the keys below fall into two groups, divided where marked. The upstream
+# chart ignores the rig's keys and vice versa.
+
+# ---------------------------------------------------------------------------
+# Upstream chart: ModerNews/github-actions-exporter, path helm/
+# ---------------------------------------------------------------------------
+
+image:
+  registry: ghcr.io
+  repository: modernews/github-actions-exporter
+  # Empty falls back to the chart's appVersion, which tracks the crate version.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Rendered by the rig's VaultStaticSecret, not by the upstream chart - pointing
+# existingSecret at it is what stops the chart templating a Secret of its own.
+webhookSecret:
+  existingSecret: github-actions-exporter-webhook
+  secretKey: webhook-secret
+
+# Deliberately short for a test rig: entities that never complete fall out
+# within the hour, so `reason="lost"` evictions show up in a session rather
+# than a day later.
+entityTtlHours: 1
+
+# tower_http=debug logs one line per inbound request, which is half the
+# point of this deployment - it is how you see a delivery arrive at all.
+logFilter: info,tower_http=debug,github_actions_exporter=debug
+
+service:
+  enabled: true
+  port: 8080
+  targetPort: 8080
+
+# GitHub reaches the exporter through the ngrok sidecar below. No Ingress, no
+# public hostname, nothing in Traefik.
+ingress:
+  enabled: false
+
+# The prometheus-operator CRDs are installed on this cluster but no operator
+# runs, so a ServiceMonitor would be created and then never reconciled by
+# anything. The rig's Prometheus uses a static scrape config instead.
+prometheus:
+  monitor:
+    enabled: false
+prometheusRule:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Writable state for the sidecar. The ngrok image's entrypoint copies
+# NGROK_AUTHTOKEN into /var/lib/ngrok/auth-config.yml and the agent then
+# refuses to start if that file is absent, so with readOnlyRootFilesystem this
+# exact path has to be writable. The entrypoint ignores $HOME - mounting
+# anywhere else just moves the failure, it does not fix it.
+extraVolumes:
+  - name: ngrok-state
+    emptyDir: {}
+
+# The tunnel. Runs beside the exporter rather than as its own Deployment so it
+# can forward to 127.0.0.1:8080 - same pod, same network namespace, so the
+# exporter is never reachable from outside except through this tunnel.
+sidecars:
+  - name: ngrok
+    image: ngrok/ngrok:3
+    args:
+      - http
+      - "8080"
+      - --log=stdout
+      - --log-format=json
+      - --log-level=info
+      # Without a chosen URL ngrok assigns a random one per restart, and the
+      # GitHub webhook has to be repointed every time the pod rolls. If you
+      # have a reserved domain, set it here and the URL survives restarts:
+      #   - --url=https://<your-reserved>.ngrok.app
+      # NB: this is `--url`; the old `--domain` flag is gone as of agent 3.39.
+    # The agent's traffic inspector, already bound to 0.0.0.0 by default. Port
+    # -forward it to replay and examine individual deliveries - it is the one
+    # place you can see the raw payload GitHub sent.
+    ports:
+      - name: ngrok-web
+        containerPort: 4040
+        protocol: TCP
+    env:
+      - name: NGROK_AUTHTOKEN
+        valueFrom:
+          secretKeyRef:
+            name: github-actions-exporter-ngrok
+            key: authtoken
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
+    volumeMounts:
+      - name: ngrok-state
+        mountPath: /var/lib/ngrok
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
+
+# ---------------------------------------------------------------------------
+# Rig chart (this directory)
+# ---------------------------------------------------------------------------
+
+vault:
+  enabled: true
+  name: github-actions-exporter
+  address: http://transit-vault.transit-vault.svc.cluster.local:8200
+  # NOT the shared `vso` role. That role's policy (`oidc-read`) is granted on
+  # secret/data/oidc/* only - see transit-vault/README.md, "Known trade-off" -
+  # so it cannot read the paths below and VSO would just log 403s forever.
+  # This role is created by hand; see this directory's README.
+  role: github-actions-exporter
+  serviceAccount: default
+  mount: secret
+  refreshAfter: 1h
+  # One VaultStaticSecret per entry. `env` maps the key written into the
+  # rendered Secret <- the key read out of Vault.
+  secrets:
+    - name: github-actions-exporter-webhook
+      path: github-actions-exporter/webhook
+      env:
+        webhook-secret: secret
+    - name: github-actions-exporter-ngrok
+      path: github-actions-exporter/ngrok
+      env:
+        authtoken: authtoken
+
+# A single Prometheus pod with a static scrape config - no operator, no
+# ServiceMonitor, no Alertmanager. Reached with `kubectl port-forward`; it has
+# no Service type beyond ClusterIP and no Ingress.
+prometheusServer:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: v3.15.1
+    pullPolicy: IfNotPresent
+  scrapeInterval: 15s
+  # Long enough to chart a few days of real workflow traffic.
+  retention: 15d
+  storage:
+    size: 2Gi
+    # Empty uses the cluster default, which is local-path here.
+    className: ""
+  # host:port the exporter's Service answers on, in this namespace.
+  target: github-actions-exporter:8080
+  metricsPath: /api/v1/metrics
+  externalLabels:
+    cluster: homelab
+    rig: github-actions-exporter
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 512Mi

@@ -1,0 +1,151 @@
+{{- with .Values.prometheusServer }}
+{{- if .enabled }}
+{{- /*
+A deliberately minimal TSDB for the rig: one Deployment, one static scrape
+config, one PVC. No operator, no ServiceMonitor, no Alertmanager, no Ingress.
+
+Why static rather than a ServiceMonitor: the prometheus-operator CRDs are
+installed on this cluster (see .argocd/prometheusCRDsApplication.yaml) but
+nothing reconciles them, so a ServiceMonitor is an object that looks right and
+does nothing. A scrape_config in a ConfigMap is the honest version.
+
+Recreate, not RollingUpdate: the TSDB takes an exclusive lock on its directory
+and the volume is RWO on a single node, so a second pod would crash-loop on
+"opening storage failed: lock DB directory" until the first one went away.
+*/}}
+{{- /*
+Built once into a variable so the Deployment below can hash the exact bytes it
+mounts. Hashing a hand-picked list of the values that feed it instead would go
+stale the moment someone adds a field here and forgets the annotation.
+*/}}
+{{- $config := include "rig.prometheusConfig" $ }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: rig
+data:
+  prometheus.yml: |
+    {{- $config | nindent 4 }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-prometheus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .storage.className }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $.Release.Name }}-prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: rig
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: rig
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: rig
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+      app.kubernetes.io/component: rig
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+        app.kubernetes.io/component: rig
+      annotations:
+        # Rolls the pod when the scrape config changes; Prometheus does not
+        # reload a mounted ConfigMap on its own.
+        checksum/config: {{ $config | sha256sum }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # The uid the upstream prom/prometheus image is built around; fsGroup
+        # is what makes the PVC writable for it.
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus
+          image: "{{ .image.repository }}:{{ .image.tag }}"
+          imagePullPolicy: {{ .image.pullPolicy }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time={{ .retention }}
+            - --web.listen-address=0.0.0.0:9090
+            # So `kubectl exec ... -- kill -HUP` is not the only way to pick up
+            # an edited scrape config.
+            - --web.enable-lifecycle
+          ports:
+            - name: http
+              containerPort: 9090
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+          {{- with .resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+              readOnly: true
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $.Release.Name }}-prometheus
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $.Release.Name }}-prometheus
+{{- end }}
+{{- end }}
