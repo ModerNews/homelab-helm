@@ -59,21 +59,28 @@ resources:
   limits:
     memory: 128Mi
 
-# Writable state for the sidecar. The ngrok image's entrypoint copies
-# NGROK_AUTHTOKEN into /var/lib/ngrok/auth-config.yml and the agent then
-# refuses to start if that file is absent, so with readOnlyRootFilesystem this
-# exact path has to be writable. The entrypoint ignores $HOME - mounting
-# anywhere else just moves the failure, it does not fix it.
-extraVolumes:
-  - name: ngrok-state
-    emptyDir: {}
-
 # The tunnel. Runs beside the exporter rather than as its own Deployment so it
 # can forward to 127.0.0.1:8080 - same pod, same network namespace, so the
 # exporter is never reachable from outside except through this tunnel.
 sidecars:
   - name: ngrok
     image: ngrok/ngrok:3
+    # Runs the agent directly, bypassing the image's entrypoint. That script
+    # writes NGROK_AUTHTOKEN into /var/lib/ngrok/auth-config.yml and passes
+    # the image's own /var/lib/ngrok/ngrok.yml with --config, which does not
+    # survive a read-only rootfs: the write fails, and mounting a volume to
+    # make it writable hides the shipped ngrok.yml, so the agent then dies on
+    # a --config path that no longer exists. (Docker hides this - it copies
+    # image content into a fresh tmpfs/volume mount; emptyDir does not.)
+    #
+    # The agent reads NGROK_AUTHTOKEN itself and needs no config file at all,
+    # so skipping the entrypoint drops both failure modes and leaves the
+    # container genuinely read-only with no writable mount.
+    #
+    # One consequence: ngrok.yml is what set `web_addr: 0.0.0.0:4040`, so the
+    # traffic inspector now binds 127.0.0.1:4040. `kubectl port-forward`
+    # reaches it anyway - it attaches to the pod's network namespace.
+    command: ["ngrok"]
     args:
       - http
       - "8080"
@@ -85,13 +92,6 @@ sidecars:
       # have a reserved domain, set it here and the URL survives restarts:
       #   - --url=https://<your-reserved>.ngrok.app
       # NB: this is `--url`; the old `--domain` flag is gone as of agent 3.39.
-    # The agent's traffic inspector, already bound to 0.0.0.0 by default. Port
-    # -forward it to replay and examine individual deliveries - it is the one
-    # place you can see the raw payload GitHub sent.
-    ports:
-      - name: ngrok-web
-        containerPort: 4040
-        protocol: TCP
     env:
       - name: NGROK_AUTHTOKEN
         valueFrom:
@@ -104,9 +104,6 @@ sidecars:
         drop:
           - ALL
       readOnlyRootFilesystem: true
-    volumeMounts:
-      - name: ngrok-state
-        mountPath: /var/lib/ngrok
     resources:
       requests:
         cpu: 10m
