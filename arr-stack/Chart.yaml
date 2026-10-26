@@ -11,7 +11,7 @@ maintainers:
 # rewrites the literal string and cannot resolve an alias.
 dependencies:
   - name: jellyfin
-    version: "3.4.0"
+    version: "3.6.0"
     repository: "https://jellyfin.github.io/jellyfin-helm"
 
   - name: app-template
