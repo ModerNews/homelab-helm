@@ -10,5 +10,5 @@ maintainers:
 
 dependencies:
   - name: argo-cd
-    version: "10.10.5"
+    version: "10.11.6"
     repository: "https://argoproj.github.io/argo-helm"
