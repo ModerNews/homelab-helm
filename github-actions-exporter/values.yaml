@@ -146,7 +146,7 @@ prometheusServer:
   enabled: true
   image:
     repository: prom/prometheus
-    tag: v3.15.1
+    tag: v3.16.0
     pullPolicy: IfNotPresent
   scrapeInterval: 15s
   # Long enough to chart a few days of real workflow traffic.
